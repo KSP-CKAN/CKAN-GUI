@@ -16,7 +16,7 @@ namespace CKAN
         InstalledUpdateAvailable = 2,
         NewInRepository = 3,
         NotInstalled = 4,
-        Incompatible = 5
+        Incompatible = 5 
     }
 
     public enum GUIModChangeType
