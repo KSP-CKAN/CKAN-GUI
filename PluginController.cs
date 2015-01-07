@@ -15,7 +15,8 @@ namespace CKAN
         {
             m_AssemblyPath = assemblyPath;
             m_AppDomain = AppDomain.CreateDomain(assemblyPath);
-            m_Plugin = (IGUIPlugin)m_AppDomain.CreateInstanceFromAndUnwrap(assemblyPath, typeof(IGUIPlugin).FullName);
+            string name = Path.GetFileNameWithoutExtension(assemblyPath);
+            m_Plugin = (IGUIPlugin)m_AppDomain.CreateInstanceFromAndUnwrap(assemblyPath, String.Format("{0}.{1}", name, name));
         }
 
         public void Activate()
