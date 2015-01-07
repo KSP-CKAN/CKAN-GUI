@@ -17,6 +17,7 @@ namespace CKAN
         {
             return String.Format("{0} - {1}", GetName(), GetVersion());
         }
+
     }
 
 }

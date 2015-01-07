@@ -7,6 +7,70 @@ using log4net;
 
 namespace CKAN
 {
+    public class Plugin
+    {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Plugin));
+
+        public Plugin(string assemblyPath)
+        {
+            m_AssemblyPath = assemblyPath;
+            m_AppDomain = AppDomain.CreateDomain(assemblyPath);
+            m_Plugin = (IGUIPlugin)m_AppDomain.CreateInstanceFromAndUnwrap(assemblyPath, typeof(IGUIPlugin).FullName);
+        }
+
+        public void Activate()
+        {
+            if (m_Active)
+            {
+                return;
+            }
+
+            try
+            {
+                m_Plugin.Initialize();
+                m_Active = true;
+            }
+            catch (Exception ex)
+            {
+                m_Active = false;
+                log.ErrorFormat("Failed to activate plugin \"{0} - {1}\" - {2}", m_Plugin.GetName(), m_Plugin.GetVersion(), ex.Message);
+            }
+        }
+
+        public void Deactivate()
+        {
+            if (!m_Active)
+            {
+                return;
+            }
+
+            try
+            {
+                m_Plugin.Deinitialize();
+                m_Active = true;
+            }
+            catch (Exception ex)
+            {
+                m_Active = false;
+                log.ErrorFormat("Failed to activate plugin \"{0} - {1}\" - {2}", m_Plugin.GetName(), m_Plugin.GetVersion(), ex.Message);
+            }
+        }
+
+        public bool IsActive
+        {
+            get
+            {
+                return m_Active;
+            }
+        }
+        
+        private AppDomain m_AppDomain = null;
+        private IGUIPlugin m_Plugin = null;
+        private string m_AssemblyPath = null;
+        private bool m_Active = false;
+
+    }
+
     public class PluginController
     {
 
@@ -20,81 +84,7 @@ namespace CKAN
 
             foreach (string dll in Directory.GetFiles(path, "*.dll"))
             {
-                LoadAssembly(dll);
-            }
-
-            if (doActivate)
-            {
-                foreach (var plugin in m_DormantPlugins.ToArray()) // use .ToArray() to avoid modifying the collection during the for-each
-                {
-                    ActivatePlugin(plugin);
-                }
-            }
-        }
-
-        private void LoadAssembly(string dll)
-        {
-            dll = dll.Replace("/", "\\");
-
-            Assembly assembly = null;
-
-            try
-            {
-                assembly = Assembly.LoadFile(dll);
-            }
-            catch (Exception ex)
-            {
-                log.WarnFormat("Failed to load assembly \"{0}\" - {1}", dll, ex.Message);
-                return;
-            }
-
-            log.InfoFormat("Loaded assembly - \"{0}\"", dll);
-
-            try
-            {
-                var typeName = Path.GetFileNameWithoutExtension(dll);
-                typeName = String.Format("{0}.{1}", typeName, typeName);
-
-                Type type = assembly.GetType(typeName);
-                IGUIPlugin pluginInstance = (IGUIPlugin)Activator.CreateInstance(type);
-
-                foreach (var loadedPlugin in m_ActivePlugins)
-                {
-                    if (loadedPlugin.GetName() == pluginInstance.GetName())
-                    {
-                        if (loadedPlugin.GetVersion().IsLessThan(pluginInstance.GetVersion()))
-                        {
-                            DeactivatePlugin(loadedPlugin);
-                            m_DormantPlugins.Remove(loadedPlugin);
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
-                }
-
-                foreach (var loadedPlugin in m_DormantPlugins)
-                {
-                    if (loadedPlugin.GetName() == pluginInstance.GetName())
-                    {
-                        if (loadedPlugin.GetVersion().IsLessThan(pluginInstance.GetVersion()))
-                        {
-                            m_DormantPlugins.Remove(loadedPlugin);
-                        }
-                        else
-                        {
-                            return;
-                        }
-                    }
-                }
-
-                m_DormantPlugins.Add(pluginInstance);
-                log.WarnFormat("Successfully instantiated type \"{0}\" from {1}.dll", assembly.FullName, assembly.FullName);
-            }
-            catch (Exception ex)
-            {
-                log.WarnFormat("Failed to instantiate type \"{0}\" from {1} - {2}.dll", assembly.FullName, assembly.FullName, ex.Message);
+                m_Plugins.Add(new Plugin(dll));
             }
         }
 
@@ -121,74 +111,21 @@ namespace CKAN
             }
 
             File.Copy(path, targetPath);
-            LoadAssembly(targetPath);
+            m_Plugins.Add(new Plugin(targetPath));
         }
 
-        public void ActivatePlugin(IGUIPlugin plugin)
+        public void UnloadPlugin(Plugin plugin)
         {
-            if (m_DormantPlugins.Contains(plugin))
-            {
-                try
-                {
-                    plugin.Initialize();
-                }
-                catch (Exception ex)
-                {
-                    log.ErrorFormat("Failed to activate plugin \"{0} - {1}\" - {2}", plugin.GetName(), plugin.GetVersion(), ex.Message);
-                    return;
-                }
-
-                m_ActivePlugins.Add(plugin);
-                m_DormantPlugins.Remove(plugin);
-                log.InfoFormat("Activated plugin \"{0} - {1}\"", plugin.GetName(), plugin.GetVersion());
-            }
+            plugin.Deactivate();
+            m_Plugins.Remove(plugin);
         }
 
-        public void DeactivatePlugin(IGUIPlugin plugin)
+        public List<Plugin> Plugins
         {
-            if (m_ActivePlugins.Contains(plugin))
-            {
-                try
-                {
-                    plugin.Deinitialize();
-                }
-                catch (Exception ex)
-                {
-                    log.ErrorFormat("Failed to deactivate plugin \"{0} - {1}\" - {2}", plugin.GetName(), plugin.GetVersion(), ex.Message);
-                    return;
-                }
-
-                m_DormantPlugins.Add(plugin);
-                m_ActivePlugins.Remove(plugin);
-                log.InfoFormat("Deactivated plugin \"{0} - {1}\"", plugin.GetName(), plugin.GetVersion());
-            }
+            get { return m_Plugins.ToList(); }
         }
 
-        public void UnloadPlugin(IGUIPlugin plugin)
-        {
-            if (m_ActivePlugins.Contains(plugin))
-            {
-                DeactivatePlugin(plugin);
-            }
-
-            if (m_DormantPlugins.Contains(plugin))
-            {
-                m_DormantPlugins.Remove(plugin);
-            }
-        }
-
-        public List<IGUIPlugin> ActivePlugins
-        {
-            get { return m_ActivePlugins.ToList(); }
-        }
-
-        public List<IGUIPlugin> DormantPlugins
-        {
-            get { return m_DormantPlugins.ToList(); }
-        }
-
-        private HashSet<IGUIPlugin> m_ActivePlugins = new HashSet<IGUIPlugin>();
-        private HashSet<IGUIPlugin> m_DormantPlugins = new HashSet<IGUIPlugin>();
+        private HashSet<Plugin> m_Plugins = new HashSet<Plugin>();
 
     }
 

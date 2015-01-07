@@ -21,32 +21,29 @@ namespace CKAN
             ActivatePluginButton.Enabled = false;
             UnloadPluginButton.Enabled = false;
 
-            RefreshActivePlugins();
-            RefreshDormantPlugins();
+            RefreshPlugins();
 
             m_AddNewPluginDialog.Filter = "CKAN Plugins (*.dll)|*.dll";
             m_AddNewPluginDialog.Multiselect = false;
         }
 
-        private void RefreshActivePlugins()
+        private void RefreshPlugins()
         {
-            var activePlugins = Main.Instance.m_PluginController.ActivePlugins;
+            var plugins = Main.Instance.m_PluginController.Plugins;
 
             ActivePluginsListBox.Items.Clear();
-            foreach (var plugin in activePlugins)
-            {
-                ActivePluginsListBox.Items.Add(plugin);
-            }
-        }
-
-        private void RefreshDormantPlugins()
-        {
-            var dormantPlugins = Main.Instance.m_PluginController.DormantPlugins;
-
             DormantPluginsListBox.Items.Clear();
-            foreach (var plugin in dormantPlugins)
+
+            foreach (var plugin in plugins)
             {
-                DormantPluginsListBox.Items.Add(plugin);
+                if (plugin.IsActive)
+                {
+                    ActivePluginsListBox.Items.Add(plugin);
+                }
+                else
+                {
+                    DormantPluginsListBox.Items.Add(plugin);
+                }
             }
         }
 
@@ -64,10 +61,9 @@ namespace CKAN
                 return;
             }
 
-            var plugin = (IGUIPlugin) ActivePluginsListBox.SelectedItem;
-            Main.Instance.m_PluginController.DeactivatePlugin(plugin);
-            RefreshActivePlugins();
-            RefreshDormantPlugins();
+            var plugin = (Plugin)ActivePluginsListBox.SelectedItem;
+            plugin.Deactivate();
+            RefreshPlugins();
         }
 
         private void ReloadPluginButton_Click(object sender, EventArgs e)
@@ -77,11 +73,10 @@ namespace CKAN
                 return;
             }
 
-            var plugin = (IGUIPlugin)ActivePluginsListBox.SelectedItem;
-            Main.Instance.m_PluginController.DeactivatePlugin(plugin);
-            Main.Instance.m_PluginController.ActivatePlugin(plugin);
-            RefreshActivePlugins();
-            RefreshDormantPlugins();
+            var plugin = (Plugin)ActivePluginsListBox.SelectedItem;
+            plugin.Deactivate();
+            plugin.Activate();
+            RefreshPlugins();
         }
 
         private void DormantPluginsListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -98,10 +93,9 @@ namespace CKAN
                 return;
             }
 
-            var plugin = (IGUIPlugin)DormantPluginsListBox.SelectedItem;
-            Main.Instance.m_PluginController.ActivatePlugin(plugin);
-            RefreshActivePlugins();
-            RefreshDormantPlugins();
+            var plugin = (Plugin)DormantPluginsListBox.SelectedItem;
+            plugin.Activate();
+            RefreshPlugins();
         }
 
         private void UnloadPluginButton_Click(object sender, EventArgs e)
@@ -111,10 +105,8 @@ namespace CKAN
                 return;
             }
 
-            var plugin = (IGUIPlugin)DormantPluginsListBox.SelectedItem;
+            var plugin = (Plugin)DormantPluginsListBox.SelectedItem;
             Main.Instance.m_PluginController.UnloadPlugin(plugin);
-            RefreshActivePlugins();
-            RefreshDormantPlugins();
         }
 
         private void AddNewPluginButton_Click(object sender, EventArgs e)
@@ -123,7 +115,7 @@ namespace CKAN
             {
                 var path = m_AddNewPluginDialog.FileName;
                 Main.Instance.m_PluginController.AddNewAssemblyToPluginsPath(path);
-                RefreshDormantPlugins();
+                RefreshPlugins();
             }
         }
 
