@@ -2,7 +2,7 @@
 
 namespace CKAN
 {
-    public abstract class IGUIPlugin
+    public abstract class IGUIPlugin : MarshalByRefObject
     {
 
         public abstract string GetName();
@@ -17,6 +17,7 @@ namespace CKAN
         {
             return String.Format("{0} - {1}", GetName(), GetVersion());
         }
+
     }
 
 }
