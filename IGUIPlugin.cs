@@ -2,7 +2,7 @@
 
 namespace CKAN
 {
-    public abstract class IGUIPlugin
+    public abstract class IGUIPlugin : MarshalByRefObject
     {
 
         public abstract string GetName();
