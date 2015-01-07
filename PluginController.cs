@@ -14,9 +14,22 @@ namespace CKAN
         public Plugin(string assemblyPath)
         {
             m_AssemblyPath = assemblyPath;
+            log.InfoFormat("Creating AppDomain for \"{0}\"", assemblyPath);
             m_AppDomain = AppDomain.CreateDomain(assemblyPath);
             string name = Path.GetFileNameWithoutExtension(assemblyPath);
-            m_Plugin = (IGUIPlugin)m_AppDomain.CreateInstanceFromAndUnwrap(assemblyPath, String.Format("{0}.{1}", name, name));
+            string typeName = String.Format("{0}.{0}", name);
+            log.InfoFormat("Instantiating {0} from \"{1}\"", typeName, assemblyPath);
+
+            try
+            {
+                m_Plugin = (IGUIPlugin)m_AppDomain.CreateInstanceFromAndUnwrap(assemblyPath, typeName);
+                log.InfoFormat("Successfully instantiated {0}: {1} - {2}", typeName, m_Plugin.GetName(), m_Plugin.GetVersion());
+            }
+            catch (Exception ex)
+            {
+                log.InfoFormat("Failed to instantiate {0} - {1}", typeName, ex.Message);
+                throw;
+            }
         }
 
         public void Activate()
@@ -28,6 +41,8 @@ namespace CKAN
 
             try
             {
+                log.InfoFormat("Activating plugin \"{0}\"", this.ToString());
+
                 m_Plugin.Initialize();
                 m_Active = true;
             }
@@ -47,13 +62,15 @@ namespace CKAN
 
             try
             {
+                log.InfoFormat("Deactivating plugin \"{0}\"", this.ToString());
+
                 m_Plugin.Deinitialize();
                 m_Active = true;
             }
             catch (Exception ex)
             {
                 m_Active = false;
-                log.ErrorFormat("Failed to activate plugin \"{0} - {1}\" - {2}", m_Plugin.GetName(), m_Plugin.GetVersion(), ex.Message);
+                log.ErrorFormat("Failed to deactivate plugin \"{0} - {1}\" - {2}", m_Plugin.GetName(), m_Plugin.GetVersion(), ex.Message);
             }
         }
 
@@ -64,7 +81,12 @@ namespace CKAN
                 return m_Active;
             }
         }
-        
+
+        public override string ToString()
+        {
+            return m_Plugin.GetName() + " - " + m_Plugin.GetVersion();
+        }
+
         private AppDomain m_AppDomain = null;
         private IGUIPlugin m_Plugin = null;
         private string m_AssemblyPath = null;
