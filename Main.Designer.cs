@@ -785,6 +785,7 @@ namespace CKAN
             this.MainTabControl.SelectedIndex = 0;
             this.MainTabControl.Size = new System.Drawing.Size(1029, 672);
             this.MainTabControl.TabIndex = 9;
+            this.MainTabControl.BackColor = System.Drawing.SystemColors.Control;
             // 
             // ManageModsTabPage
             // 
