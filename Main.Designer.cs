@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System.Drawing;
+using System.Windows.Forms;
 
 namespace CKAN
 {
@@ -154,6 +155,7 @@ namespace CKAN
             this.menuStrip1.Size = new System.Drawing.Size(1029, 24);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
+            this.menuStrip1.BackColor = System.Drawing.SystemColors.Control;
             // 
             // fileToolStripMenuItem
             // 
@@ -783,6 +785,7 @@ namespace CKAN
             this.MainTabControl.SelectedIndex = 0;
             this.MainTabControl.Size = new System.Drawing.Size(1029, 672);
             this.MainTabControl.TabIndex = 9;
+            this.MainTabControl.BackColor = System.Drawing.SystemColors.Control;
             // 
             // ManageModsTabPage
             // 
