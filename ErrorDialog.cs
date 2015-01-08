@@ -26,7 +26,11 @@ namespace CKAN
             {
                 log.ErrorFormat(text, args);
                 ErrorMessage.Text = String.Format(text, args);
-                ShowDialog();
+
+                if (!Visible)
+                {
+                    ShowDialog();
+                }
             }
         }
 
