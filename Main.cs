@@ -611,6 +611,43 @@ namespace CKAN
             Enabled = true;
         }
 
+        private void installFromFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.CheckFileExists = true;
+                dialog.Filter = "Ckan packages (*.ckan)|*.ckan";
+                dialog.Multiselect = true;
+                dialog.SupportMultiDottedExtensions = true;
+
+                DialogResult result = dialog.ShowDialog();
+                if (result == System.Windows.Forms.DialogResult.OK)
+                {
+                    string[] paths = dialog.FileNames;
+
+                    foreach (string file in paths)
+                    {
+                        try
+                        {
+                            List<CkanModule> modules = paths.Select(p => CkanModule.FromFile(p)).ToList();
+
+                            // Now we need to add the new modules to the modlist (already ticked)
+                            // so that the user can use "go to changes"
+                            // this line is not the way to do it, though...
+                            ModuleInstaller.GetInstance(CurrentInstance, GUI.user)
+                                           .InstallList(modules, new RelationshipResolverOptions());
+                        }
+                        catch (Exception)
+                        {
+                            
+                            throw;
+                        }
+                    }
+
+                }
+            }
+        }
+
     }
 
     public class GUIUser : NullUser
