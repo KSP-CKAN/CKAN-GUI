@@ -86,7 +86,7 @@ namespace CKAN
         public static bool IsInstallable(this GUIMod mod)
         {
 
-            return !(mod == null || mod.IsAutodetected || mod.IsIncompatible);
+            return !(mod == null || mod.IsAutodetected);
         }
     }
 }

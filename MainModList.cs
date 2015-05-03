@@ -54,8 +54,8 @@ namespace CKAN
             ModList.Sort(ModList.Columns[2], ListSortDirection.Ascending);
 
             //TODO Consider using smart enum patten so stuff like this is easier
-            FilterToolButton.DropDownItems[0].Text = String.Format("All ({0})",
-                mainModList.CountModsByFilter(GUIModFilter.All));
+            FilterToolButton.DropDownItems[0].Text = String.Format("All Compatible ({0})",
+                mainModList.CountModsByFilter(GUIModFilter.AllCompatible));
             FilterToolButton.DropDownItems[1].Text = String.Format("Installed ({0})",
                 mainModList.CountModsByFilter(GUIModFilter.Installed));
             FilterToolButton.DropDownItems[2].Text = String.Format("Updated ({0})",
@@ -159,7 +159,7 @@ namespace CKAN
             }
         }
 
-        private GUIModFilter _modFilter = GUIModFilter.All;
+        private GUIModFilter _modFilter = GUIModFilter.AllCompatible;
         private string _modNameFilter = String.Empty;
         private string _modAuthorFilter = String.Empty;
 
@@ -205,7 +205,9 @@ namespace CKAN
             RelationshipResolver resolver;
             try
             {
-                resolver = new RelationshipResolver(modulesToInstall.ToList(), options, registry, current_instance.Version());
+                // set the KSP version here to NULL, because we allow incompatible mod installation.  We will ask
+                // the user if he is sure during installation process.
+                resolver = new RelationshipResolver(modulesToInstall.ToList(), options, registry, null);
             }
             catch (Exception)
             {
@@ -250,7 +252,7 @@ namespace CKAN
 
             switch (filter)
             {
-                case GUIModFilter.All:
+                case GUIModFilter.AllCompatible:
                     return Modules.Count(m => !m.IsIncompatible);
                 case GUIModFilter.Installed:
                     return Modules.Count(m => m.IsInstalled);
@@ -276,9 +278,7 @@ namespace CKAN
                 var installedCell = mod.IsInstallable()
                     ? (DataGridViewCell) new DataGridViewCheckBoxCell()
                     : new DataGridViewTextBoxCell();
-                installedCell.Value = mod.IsIncompatible
-                    ? "-"
-                    : (!mod.IsAutodetected ? (object) mod.IsInstalled : "AD");
+                installedCell.Value = (!mod.IsAutodetected ? (object) mod.IsInstalled : "AD");
 
                 var updateCell = !mod.IsInstallable() || !mod.HasUpdate
                     ? (DataGridViewCell) new DataGridViewTextBoxCell()
@@ -322,7 +322,7 @@ namespace CKAN
         {     
             switch (ModFilter)
             {
-                case GUIModFilter.All:
+                case GUIModFilter.AllCompatible:
                     return !m.IsIncompatible;
                 case GUIModFilter.Installed:
                     return m.IsInstalled;
