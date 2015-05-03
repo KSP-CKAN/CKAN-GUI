@@ -48,13 +48,6 @@ namespace CKAN
             this.UpdateAllToolButton = new System.Windows.Forms.ToolStripMenuItem();
             this.ApplyToolButton = new System.Windows.Forms.ToolStripMenuItem();
             this.FilterToolButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterAllButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterInstalledButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterInstalledUpdateButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterNewButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterNotInstalledButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.FilterIncompatibleButton = new System.Windows.Forms.ToolStripMenuItem();
-            this.customToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ModList = new System.Windows.Forms.DataGridView();
             this.Installed = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.Update = new System.Windows.Forms.DataGridViewCheckBoxColumn();
@@ -125,6 +118,13 @@ namespace CKAN
             this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader8 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.ChooseProvidedModsLabel = new System.Windows.Forms.Label();
+            this.FilterAllButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterInstalledButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterInstalledUpdateButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterNewButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterNotInstalledButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterIncompatibleButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.customToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.menuStrip2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.ModList)).BeginInit();
@@ -303,56 +303,8 @@ namespace CKAN
             this.FilterToolButton.Image = global::CKAN.Properties.Resources.search;
             this.FilterToolButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.FilterToolButton.Name = "FilterToolButton";
-            this.FilterToolButton.Size = new System.Drawing.Size(102, 36);
-            this.FilterToolButton.Text = "Filter (All)";
-            // 
-            // FilterAllButton
-            // 
-            this.FilterAllButton.Name = "FilterAllButton";
-            this.FilterAllButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterAllButton.Text = "All";
-            this.FilterAllButton.Click += new System.EventHandler(this.FilterAllButton_Click);
-            // 
-            // FilterInstalledButton
-            // 
-            this.FilterInstalledButton.Name = "FilterInstalledButton";
-            this.FilterInstalledButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterInstalledButton.Text = "Installed";
-            this.FilterInstalledButton.Click += new System.EventHandler(this.FilterInstalledButton_Click);
-            // 
-            // FilterInstalledUpdateButton
-            // 
-            this.FilterInstalledUpdateButton.Name = "FilterInstalledUpdateButton";
-            this.FilterInstalledUpdateButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterInstalledUpdateButton.Text = "Installed (update available)";
-            this.FilterInstalledUpdateButton.Click += new System.EventHandler(this.FilterInstalledUpdateButton_Click);
-            // 
-            // FilterNewButton
-            // 
-            this.FilterNewButton.Name = "FilterNewButton";
-            this.FilterNewButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterNewButton.Text = "New in repository";
-            this.FilterNewButton.Click += new System.EventHandler(this.FilterNewButton_Click);
-            // 
-            // FilterNotInstalledButton
-            // 
-            this.FilterNotInstalledButton.Name = "FilterNotInstalledButton";
-            this.FilterNotInstalledButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterNotInstalledButton.Text = "Not installed";
-            this.FilterNotInstalledButton.Click += new System.EventHandler(this.FilterNotInstalledButton_Click);
-            // 
-            // FilterIncompatibleButton
-            // 
-            this.FilterIncompatibleButton.Name = "FilterIncompatibleButton";
-            this.FilterIncompatibleButton.Size = new System.Drawing.Size(215, 22);
-            this.FilterIncompatibleButton.Text = "Incompatible";
-            this.FilterIncompatibleButton.Click += new System.EventHandler(this.FilterIncompatibleButton_Click);
-            // 
-            // customToolStripMenuItem
-            // 
-            this.customToolStripMenuItem.Name = "customToolStripMenuItem";
-            this.customToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
-            this.customToolStripMenuItem.Text = "Custom";
+            this.FilterToolButton.Size = new System.Drawing.Size(167, 36);
+            this.FilterToolButton.Text = "Filter (All Compatible)";
             // 
             // ModList
             // 
@@ -1151,6 +1103,54 @@ namespace CKAN
             this.ChooseProvidedModsLabel.TabIndex = 7;
             this.ChooseProvidedModsLabel.Text = "Several mods provide the virtual module Foo, choose one of the following mods:";
             // 
+            // FilterAllButton
+            // 
+            this.FilterAllButton.Name = "FilterAllButton";
+            this.FilterAllButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterAllButton.Text = "All Compatible";
+            this.FilterAllButton.Click += new System.EventHandler(this.FilterAllButton_Click);
+            // 
+            // FilterInstalledButton
+            // 
+            this.FilterInstalledButton.Name = "FilterInstalledButton";
+            this.FilterInstalledButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterInstalledButton.Text = "Installed";
+            this.FilterInstalledButton.Click += new System.EventHandler(this.FilterInstalledButton_Click);
+            // 
+            // FilterInstalledUpdateButton
+            // 
+            this.FilterInstalledUpdateButton.Name = "FilterInstalledUpdateButton";
+            this.FilterInstalledUpdateButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterInstalledUpdateButton.Text = "Installed (update available)";
+            this.FilterInstalledUpdateButton.Click += new System.EventHandler(this.FilterInstalledUpdateButton_Click);
+            // 
+            // FilterNewButton
+            // 
+            this.FilterNewButton.Name = "FilterNewButton";
+            this.FilterNewButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterNewButton.Text = "New in repository";
+            this.FilterNewButton.Click += new System.EventHandler(this.FilterNewButton_Click);
+            // 
+            // FilterNotInstalledButton
+            // 
+            this.FilterNotInstalledButton.Name = "FilterNotInstalledButton";
+            this.FilterNotInstalledButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterNotInstalledButton.Text = "Not installed";
+            this.FilterNotInstalledButton.Click += new System.EventHandler(this.FilterNotInstalledButton_Click);
+            // 
+            // FilterIncompatibleButton
+            // 
+            this.FilterIncompatibleButton.Name = "FilterIncompatibleButton";
+            this.FilterIncompatibleButton.Size = new System.Drawing.Size(215, 22);
+            this.FilterIncompatibleButton.Text = "Incompatible";
+            this.FilterIncompatibleButton.Click += new System.EventHandler(this.FilterIncompatibleButton_Click);
+            // 
+            // customToolStripMenuItem
+            // 
+            this.customToolStripMenuItem.Name = "customToolStripMenuItem";
+            this.customToolStripMenuItem.Size = new System.Drawing.Size(215, 22);
+            this.customToolStripMenuItem.Text = "Custom";
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -1166,7 +1166,6 @@ namespace CKAN
             this.MinimumSize = new System.Drawing.Size(878, 664);
             this.Name = "Main";
             this.Text = "CKAN-GUI";
-            this.FormClosing += Main_FormClosing;
             this.Load += new System.EventHandler(this.Main_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
@@ -1215,12 +1214,6 @@ namespace CKAN
         private Panel StatusPanel;
         private Label StatusLabel;
         private ToolStripMenuItem FilterToolButton;
-        private ToolStripMenuItem FilterAllButton;
-        private ToolStripMenuItem FilterInstalledButton;
-        private ToolStripMenuItem FilterInstalledUpdateButton;
-        private ToolStripMenuItem FilterNewButton;
-        private ToolStripMenuItem FilterNotInstalledButton;
-        private ToolStripMenuItem FilterIncompatibleButton;
         private TabControl ModInfoTabControl;
         private TabPage RelationshipTabPage;
         private TreeView DependsGraphTree;
@@ -1228,7 +1221,6 @@ namespace CKAN
         private Label NotCachedLabel;
         private TreeView ContentsPreviewTree;
         private Button ContentsDownloadButton;
-        private ToolStripMenuItem customToolStripMenuItem;
         private TabPage MetadataTabPage;
         private TableLayoutPanel MetadataLayoutPanel;
         private Label VersionLabel;
@@ -1296,6 +1288,13 @@ namespace CKAN
         private ToolStripMenuItem installFromckanToolStripMenuItem;
         private TextBox FilterByAuthorTextBox;
         private Label FilterByAuthorLabel;
+        private ToolStripMenuItem FilterAllButton;
+        private ToolStripMenuItem FilterInstalledButton;
+        private ToolStripMenuItem FilterInstalledUpdateButton;
+        private ToolStripMenuItem FilterNewButton;
+        private ToolStripMenuItem FilterNotInstalledButton;
+        private ToolStripMenuItem FilterIncompatibleButton;
+        private ToolStripMenuItem customToolStripMenuItem;
     }
 }
 

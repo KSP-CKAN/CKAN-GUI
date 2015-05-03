@@ -54,8 +54,8 @@ namespace CKAN
             ModList.Sort(ModList.Columns[2], ListSortDirection.Ascending);
 
             //TODO Consider using smart enum patten so stuff like this is easier
-            FilterToolButton.DropDownItems[0].Text = String.Format("All ({0})",
-                mainModList.CountModsByFilter(GUIModFilter.All));
+            FilterToolButton.DropDownItems[0].Text = String.Format("All Compatible ({0})",
+                mainModList.CountModsByFilter(GUIModFilter.AllCompatible));
             FilterToolButton.DropDownItems[1].Text = String.Format("Installed ({0})",
                 mainModList.CountModsByFilter(GUIModFilter.Installed));
             FilterToolButton.DropDownItems[2].Text = String.Format("Updated ({0})",
@@ -159,7 +159,7 @@ namespace CKAN
             }
         }
 
-        private GUIModFilter _modFilter = GUIModFilter.All;
+        private GUIModFilter _modFilter = GUIModFilter.AllCompatible;
         private string _modNameFilter = String.Empty;
         private string _modAuthorFilter = String.Empty;
 
@@ -250,7 +250,7 @@ namespace CKAN
 
             switch (filter)
             {
-                case GUIModFilter.All:
+                case GUIModFilter.AllCompatible:
                     return Modules.Count(m => !m.IsIncompatible);
                 case GUIModFilter.Installed:
                     return Modules.Count(m => m.IsInstalled);
@@ -322,7 +322,7 @@ namespace CKAN
         {     
             switch (ModFilter)
             {
-                case GUIModFilter.All:
+                case GUIModFilter.AllCompatible:
                     return !m.IsIncompatible;
                 case GUIModFilter.Installed:
                     return m.IsInstalled;

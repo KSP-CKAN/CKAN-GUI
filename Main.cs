@@ -12,7 +12,7 @@ namespace CKAN
 {
     public enum GUIModFilter
     {
-        All = 0,
+        AllCompatible = 0,
         Installed = 1,
         InstalledUpdateAvailable = 2,
         NewInRepository = 3,
@@ -486,8 +486,8 @@ namespace CKAN
 
         private void FilterAllButton_Click(object sender, EventArgs e)
         {
-            mainModList.ModFilter = GUIModFilter.All;
-            FilterToolButton.Text = "Filter (All)";
+            mainModList.ModFilter = GUIModFilter.AllCompatible;
+            FilterToolButton.Text = "Filter (All Compatible)";
         }
 
         private void FilterInstalledButton_Click(object sender, EventArgs e)
