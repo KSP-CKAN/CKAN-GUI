@@ -7,6 +7,9 @@ using System.Windows.Forms;
 
 namespace CKAN
 {
+    /** WARNING **/
+    // Much of this file does not correctly use Util.Invoke. Never call from a thread other than the UI
+    /** WARNING **/
     public partial class Main
     {
         private BackgroundWorker m_InstallWorker;
@@ -53,7 +56,6 @@ namespace CKAN
             }
 
             // Now work on satisifying dependencies.
-
             var recommended = new Dictionary<string, List<string>>();
             var suggested = new Dictionary<string, List<string>>();
 
@@ -63,49 +65,10 @@ namespace CKAN
                 {
                     var registry = RegistryManager.Instance(manager.CurrentInstance).registry;
                     var ksp_version = manager.CurrentInstance.Version();
-                    if (change.Key.recommends != null)
-                    {
-                        foreach (RelationshipDescriptor mod in change.Key.recommends)
-                        {
-                            try
-                            {
-                                // if the mod is available for the current KSP version _and_
-                                // the mod is not installed _and_
-                                // the mod is not already in the install list
-                                if (registry.LatestAvailable(mod.name, ksp_version) != null &&
-                                    !registry.IsInstalled(mod.name) &&
-                                    !toInstall.Contains(mod.name))
-                                {
-                                    // add it to the list of recommended mods we display to the user                                    
-                                    recommended.AppendItemOrAddNewList(mod.name, change.Key.identifier);                                    
-                                }
-                            }
-                                // XXX - Don't ignore all krakens! Those things are important!
-                            catch (Kraken)
-                            {
-                            }
-                        }
-                    }
 
-                    if (change.Key.suggests != null)
-                    {
-                        foreach (RelationshipDescriptor mod in change.Key.suggests)
-                        {
-                            try
-                            {
-                                if (registry.LatestAvailable(mod.name, ksp_version) != null &&
-                                    !registry.IsInstalled(mod.name) &&
-                                    !toInstall.Contains(mod.name))
-                                {
-                                    suggested.AppendItemOrAddNewList(mod.name,change.Key.identifier);                                    
-                                }
-                            }
-                                // XXX - Don't ignore all krakens! Those things are important!
-                            catch (Kraken)
-                            {
-                            }
-                        }
-                    }
+                    var ckan_module = change.Key;
+                    AddInstallableModsToDict(registry, ksp_version, recommended, ckan_module.recommends, ckan_module.identifier);
+                    AddInstallableModsToDict(registry, ksp_version, suggested, ckan_module.suggests, ckan_module.identifier);                   
                 }
             }
 
@@ -114,52 +77,12 @@ namespace CKAN
             foreach (var item in toInstall)
             {
                 recommended.Remove(item);
-            }
-
-            // If there are any mods that would be recommended, prompt the user to make
-            // selections.
-            if (recommended.Any())
-            {
-                Util.Invoke(this, () => UpdateRecommendedDialog(recommended));
-
-                m_TabController.ShowTab("ChooseRecommendedModsTabPage", 3);
-                m_TabController.RenameTab("ChooseRecommendedModsTabPage", "Choose recommended mods");
-                m_TabController.SetTabLock(true);
-
-                lock (this)
-                {
-                    Monitor.Wait(this);
-                }
-
-                m_TabController.SetTabLock(false);
-            }
-
-            m_TabController.HideTab("ChooseRecommendedModsTabPage");
-
-            // And now on to suggestions. Again, we don't show anything that's scheduled to
-            // be installed on our suggest list.
-            foreach (var item in toInstall)
-            {
                 suggested.Remove(item);
             }
 
-            if (suggested.Any())
-            {
-                Util.Invoke(this, () => UpdateRecommendedDialog(suggested, true));
+            DisplayModSelectionTab(recommended, "Choose recommended mods");
+            DisplayModSelectionTab(suggested, "Choose suggested mods");
 
-                m_TabController.ShowTab("ChooseRecommendedModsTabPage", 3);
-                m_TabController.RenameTab("ChooseRecommendedModsTabPage", "Choose suggested mods");
-                m_TabController.SetTabLock(true);
-
-                lock (this)
-                {
-                    Monitor.Wait(this);
-                }
-
-                m_TabController.SetTabLock(false);
-            }
-
-            m_TabController.HideTab("ChooseRecommendedModsTabPage");
 
             if (installCanceled)
             {
@@ -250,92 +173,141 @@ namespace CKAN
             e.Result = new KeyValuePair<bool, List<KeyValuePair<CkanModule, GUIModChangeType>>>(true, opts.Key);
         }
 
+        private void DisplayModSelectionTab(Dictionary<string, List<string>> modlist, string tab_name)
+        {
+            // If there are any mods that would be recommended, prompt the user to make
+            // selections.
+            if (modlist.Any())
+            {
+                Util.Invoke(this, () => UpdateRecommendedDialog(modlist));
+
+                m_TabController.ShowTab("ChooseRecommendedModsTabPage", 3);
+                m_TabController.RenameTab("ChooseRecommendedModsTabPage", tab_name);
+                m_TabController.SetTabLock(true);
+
+                lock (this)
+                {
+                    Monitor.Wait(this);
+                }
+
+                m_TabController.SetTabLock(false);
+            }
+
+            m_TabController.HideTab("ChooseRecommendedModsTabPage");
+        }
+
+        private void AddInstallableModsToDict(Registry registry, KSPVersion ksp_version, Dictionary<string, List<string>> recommended, List<RelationshipDescriptor> candidates, string endorser)
+        {            
+            if (candidates == null) return;
+            
+
+            foreach (var mod in candidates)
+            {
+                try
+                {
+                    // if the mod is available for the current KSP version _and_
+                    // the mod is not installed _and_
+                    // the mod is not already in the install list
+                    if (registry.LatestAvailable(mod.name, ksp_version) != null &&
+                        !registry.IsInstalled(mod.name) &&
+                        !toInstall.Contains(mod.name))
+                    {
+                        // add it to the list of mods we display to the user                                    
+                        recommended.AppendItemOrAddNewList(mod.name, endorser);
+                    }
+                }
+                    // XXX - Don't ignore all krakens! Those things are important!
+                catch (Kraken)
+                {
+                }
+            }
+        }
+
         private bool InstallList(HashSet<string> toInstall, RelationshipResolverOptions options,
             NetAsyncDownloader downloader)
         {
-            if (toInstall.Any())
-            {
-                // actual magic happens here, we run the installer with our mod list
-                ModuleInstaller.GetInstance(manager.CurrentInstance, GUI.user).onReportModInstalled = OnModInstalled;
-                cancelCallback = downloader.CancelDownload;
-                try
-                {
-                    ModuleInstaller.GetInstance(manager.CurrentInstance, GUI.user)
-                        .InstallList(toInstall.ToList(), options, downloader);
-                }
-                catch (ModuleNotFoundKraken ex)
-                {
-                    GUI.user.RaiseMessage("Module {0} required, but not listed in index, or not available for your version of KSP", ex.module);
-                    return false;
-                }
-                catch (BadMetadataKraken ex)
-                {
-                    GUI.user.RaiseMessage("Bad metadata detected for module {0}: {1}", ex.module, ex.Message);
-                    return false;
-                }
-                catch (FileExistsKraken ex)
-                {
-                    if (ex.owning_module != null)
-                    {
-                        GUI.user.RaiseMessage(
-                            "\nOh no! We tried to overwrite a file owned by another mod!\n" +
-                            "Please try a `ckan update` and try again.\n\n" +
-                            "If this problem re-occurs, then it maybe a packaging bug.\n" +
-                            "Please report it at:\n\n" +
-                            "https://github.com/KSP-CKAN/CKAN-meta/issues/new\n\n" +
-                            "Please including the following information in your report:\n\n" +
-                            "File           : {0}\n" +
-                            "Installing Mod : {1}\n" +
-                            "Owning Mod     : {2}\n" +
-                            "CKAN Version   : {3}\n",
-                            ex.filename, ex.installing_module, ex.owning_module,
-                            Meta.Version()
-                            );
-                    }
-                    else
-                    {
-                        GUI.user.RaiseMessage(
-                            "\n\nOh no!\n\n" +
-                            "It looks like you're trying to install a mod which is already installed,\n" +
-                            "or which conflicts with another mod which is already installed.\n\n" +
-                            "As a safety feature, the CKAN will *never* overwrite or alter a file\n" +
-                            "that it did not install itself.\n\n" +
-                            "If you wish to install {0} via the CKAN,\n" +
-                            "then please manually uninstall the mod which owns:\n\n" +
-                            "{1}\n\n" + "and try again.\n",
-                            ex.installing_module, ex.filename
-                            );
-                    }
+            if (!toInstall.Any()) return true;
 
-                    GUI.user.RaiseMessage("Your GameData has been returned to its original state.\n");
-                    return false;
-                }
-                catch (InconsistentKraken ex)
+            // actual magic happens here, we run the installer with our mod list
+            ModuleInstaller.GetInstance(manager.CurrentInstance, GUI.user).onReportModInstalled = OnModInstalled;
+            cancelCallback = downloader.CancelDownload;
+            try
+            {
+                ModuleInstaller.GetInstance(manager.CurrentInstance, GUI.user)
+                    .InstallList(toInstall.ToList(), options, downloader);
+            }
+            catch (ModuleNotFoundKraken ex)
+            {
+                GUI.user.RaiseMessage("Module {0} required, but not listed in index, or not available for your version of KSP", ex.module);
+                return false;
+            }
+            catch (BadMetadataKraken ex)
+            {
+                GUI.user.RaiseMessage("Bad metadata detected for module {0}: {1}", ex.module, ex.Message);
+                return false;
+            }
+            catch (FileExistsKraken ex)
+            {
+                if (ex.owning_module != null)
                 {
-                    // The prettiest Kraken formats itself for us.
-                    GUI.user.RaiseMessage(ex.InconsistenciesPretty);
-                    return false;
+                    GUI.user.RaiseMessage(
+                        "\nOh no! We tried to overwrite a file owned by another mod!\n" +
+                        "Please try a `ckan update` and try again.\n\n" +
+                        "If this problem re-occurs, then it maybe a packaging bug.\n" +
+                        "Please report it at:\n\n" +
+                        "https://github.com/KSP-CKAN/CKAN-meta/issues/new\n\n" +
+                        "Please including the following information in your report:\n\n" +
+                        "File           : {0}\n" +
+                        "Installing Mod : {1}\n" +
+                        "Owning Mod     : {2}\n" +
+                        "CKAN Version   : {3}\n",
+                        ex.filename, ex.installing_module, ex.owning_module,
+                        Meta.Version()
+                        );
                 }
-                catch (CancelledActionKraken)
+                else
                 {
-                    return false;
+                    GUI.user.RaiseMessage(
+                        "\n\nOh no!\n\n" +
+                        "It looks like you're trying to install a mod which is already installed,\n" +
+                        "or which conflicts with another mod which is already installed.\n\n" +
+                        "As a safety feature, the CKAN will *never* overwrite or alter a file\n" +
+                        "that it did not install itself.\n\n" +
+                        "If you wish to install {0} via the CKAN,\n" +
+                        "then please manually uninstall the mod which owns:\n\n" +
+                        "{1}\n\n" + "and try again.\n",
+                        ex.installing_module, ex.filename
+                        );
                 }
-                catch (MissingCertificateKraken kraken)
-                {
-                    // Another very pretty kraken.
-                    GUI.user.RaiseMessage(kraken.ToString());
-                    return false;
-                }
-                catch (DownloadErrorsKraken)
-                {
-                    // User notified in InstallList
-                    return false;
-                }
-                catch (DirectoryNotFoundKraken kraken)
-                {
-                    GUI.user.RaiseMessage("\n{0}", kraken.Message);
-                    return false;
-                }
+
+                GUI.user.RaiseMessage("Your GameData has been returned to its original state.\n");
+                return false;
+            }
+            catch (InconsistentKraken ex)
+            {
+                // The prettiest Kraken formats itself for us.
+                GUI.user.RaiseMessage(ex.InconsistenciesPretty);
+                return false;
+            }
+            catch (CancelledActionKraken)
+            {
+                return false;
+            }
+            catch (MissingCertificateKraken kraken)
+            {
+                // Another very pretty kraken.
+                GUI.user.RaiseMessage(kraken.ToString());
+                return false;
+            }
+            catch (DownloadErrorsKraken)
+            {
+                // User notified in InstallList
+                return false;
+            }
+            catch (DirectoryNotFoundKraken kraken)
+            {
+                GUI.user.RaiseMessage("\n{0}", kraken.Message);
+                return false;
             }
 
             return true;
