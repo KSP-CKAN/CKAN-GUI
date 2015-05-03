@@ -55,7 +55,7 @@ namespace CKAN
             this.FilterNotInstalledButton = new System.Windows.Forms.ToolStripMenuItem();
             this.FilterIncompatibleButton = new System.Windows.Forms.ToolStripMenuItem();
             this.customToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.ModList = new System.Windows.Forms.DataGridView();
+            this.ModList = new KSPDataGridView();
             this.Installed = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.Update = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.ModName = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -1292,7 +1292,7 @@ namespace CKAN
         private DataGridViewLinkColumn Homepage;
         private ToolStripMenuItem pluginsToolStripMenuItem;
         public ToolStripMenuItem settingsToolStripMenuItem;
-        public DataGridView ModList;
+        public KSPDataGridView ModList;
         private ToolStripMenuItem installFromckanToolStripMenuItem;
         private TextBox FilterByAuthorTextBox;
         private Label FilterByAuthorLabel;

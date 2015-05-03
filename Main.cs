@@ -352,29 +352,10 @@ namespace CKAN
 
         /// <summary>
         /// Called on key press when the mod is focused. Scrolls to the first mod 
-        /// with name begining with the key pressed. If space is pressed, the checkbox
-        /// at the current row is toggled.
+        /// with name beginning with the key pressed.
         /// </summary>        
         private void ModList_KeyPress(object sender, KeyPressEventArgs e)
         {
-            // Check the key. If it is space, mark the current mod as selected.
-            if (e.KeyChar.ToString() == " ")
-            {
-                var selectedRow = ModList.CurrentRow;
-
-                if (selectedRow != null)
-                {
-                    // Get the checkbox.
-                    var selectedRowCheckBox = (DataGridViewCheckBoxCell)selectedRow.Cells["Installed"];
-
-                    // Invert the value.
-                    bool selectedValue = (bool)selectedRowCheckBox.Value;
-                    selectedRowCheckBox.Value = !selectedValue;
-                }
-
-                return;
-            }
-
             var rows = ModList.Rows.Cast<DataGridViewRow>().Where(row => row.Visible);
             var does_name_begin_with_char = new Func<DataGridViewRow, bool>(row =>
             {
@@ -386,39 +367,12 @@ namespace CKAN
             DataGridViewRow match = rows.FirstOrDefault(does_name_begin_with_char);
             if (match != null)
             {
+                // Make sure the matching row is selected.
                 match.Selected = true;
 
-                if (Util.IsLinux)
-                {
-                    try
-                    {
-
-                        var first_row_index = ModList.GetType().GetField("first_row_index",
-                            BindingFlags.NonPublic | BindingFlags.Instance);
-                        var vertical_scroll_bar = ModList.GetType().GetField("verticalScrollBar",
-                            BindingFlags.NonPublic | BindingFlags.Instance).GetValue(ModList);
-                        var safe_set_method = vertical_scroll_bar.GetType().GetMethod("SafeValueSet",
-                            BindingFlags.NonPublic | BindingFlags.Instance);
-
-                        first_row_index.SetValue(ModList, match.Index);
-                        safe_set_method.Invoke(vertical_scroll_bar,
-                            new object[] { match.Index * match.Height });
-                    }
-                    catch
-                    {
-                        //Compared to crashing ignoring the keypress is fine.
-                    }
-                    ModList.FirstDisplayedScrollingRowIndex = match.Index;
-                    ModList.Refresh();
-                }
-                else
-                {
-                    //Not the best of names. Why not FirstVisableRowIndex?
-                    ModList.FirstDisplayedScrollingRowIndex = match.Index;
-                }
+                // Update the scroll position.
+                ModList.UpdateScroll();
             }
-
-
         }
 
         /// <summary>
