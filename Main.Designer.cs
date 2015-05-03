@@ -1269,7 +1269,7 @@ namespace CKAN
         private DataGridViewLinkColumn Homepage;
         private ToolStripMenuItem pluginsToolStripMenuItem;
         public ToolStripMenuItem settingsToolStripMenuItem;
-        public DataGridView ModList;
+        public KSPDataGridView ModList;
         private ToolStripMenuItem installFromckanToolStripMenuItem;
     }
 }

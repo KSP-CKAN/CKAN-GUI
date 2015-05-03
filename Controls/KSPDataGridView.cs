@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace CKAN
@@ -140,11 +141,8 @@ namespace CKAN
         /// <summary>
         /// Update the scroll view to include the currently selected row.
         /// </summary>
-        private void UpdateScroll()
+        public void UpdateScroll()
         {
-            // Need some help with this one.
-
-            /*
             // Get the currently selected row.
             int index = GetCurrentIndex();
 
@@ -189,10 +187,31 @@ namespace CKAN
             }
             else
             {
-                // Move the startindex to this element.
-                this.FirstDisplayedScrollingRowIndex = index;
-                this.Update();
-            }*/
+                // Mono workaround.
+                if (!Platform.IsWindows)
+                {
+                    try
+                    {
+                        var first_row_index = this.GetType().BaseType.GetField("first_row_index", BindingFlags.NonPublic | BindingFlags.Instance);
+                        var vertical_scroll_bar = this.GetType().BaseType.GetField("verticalScrollBar", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
+                        var safe_set_method = vertical_scroll_bar.GetType().BaseType.GetMethod("SafeValueSet", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                        first_row_index.SetValue(this, index);
+                        safe_set_method.Invoke(vertical_scroll_bar, new object[] { index * this.SelectedRows[0].Height });
+                    }
+                    catch
+                    {
+                        //Compared to crashing ignoring the keypress is fine.
+                    }
+                    this.FirstDisplayedScrollingRowIndex = index;
+                    this.Refresh();
+                }
+                else
+                {
+                    // Move the startindex to this element.
+                    this.FirstDisplayedScrollingRowIndex = index;
+                }
+            }
         }
     }
 }
