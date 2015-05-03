@@ -19,9 +19,10 @@ namespace CKAN
             if (ModList == null) return;
 
             // Each time a row in DataGridViewRow is changed, DataGridViewRow updates the view. Which is slow.
-            // To make the filtering process faster, Copy the list of rows. Make all row changes then add it back to the DataGridView.
-            var rows = new DataGridViewRow[ModList.Rows.Count];
-            ModList.Rows.CopyTo(rows, 0);
+            // To make the filtering process faster, Copy the list of rows. Filter out the hidden and replace t
+            // rows in DataGridView.
+            var rows = new DataGridViewRow[mainModList.FullListOfModRows.Count];
+            mainModList.FullListOfModRows.CopyTo(rows, 0);
             ModList.Rows.Clear();
 
             foreach (DataGridViewRow row in rows)
@@ -31,7 +32,7 @@ namespace CKAN
                 row.Visible = isVisible;
             }
 
-            ModList.Rows.AddRange(rows);
+            ModList.Rows.AddRange(rows.Where(row=>row.Visible).ToArray());
         }
 
         private void UpdateModsList()
@@ -48,7 +49,7 @@ namespace CKAN
                 registry.Incompatible(CurrentInstance.Version())).ToList();
             var gui_mods = ckanModules.Select(m => new GUIMod(m, registry, CurrentInstance.Version())).ToList();
             mainModList.Modules = new ReadOnlyCollection<GUIMod>(gui_mods);
-            var rows = MainModList.ConstructModList(mainModList.Modules);
+            var rows = mainModList.ConstructModList(mainModList.Modules);
             ModList.Rows.Clear();
             ModList.Rows.AddRange(rows.ToArray());
             ModList.Sort(ModList.Columns[2], ListSortDirection.Ascending);
@@ -114,6 +115,7 @@ namespace CKAN
     public class MainModList
     {
 
+        internal List<DataGridViewRow> FullListOfModRows;
         public MainModList(ModFiltersUpdatedEvent onModFiltersUpdated)
         {
             Modules = new ReadOnlyCollection<GUIMod>(new List<GUIMod>());
@@ -266,9 +268,9 @@ namespace CKAN
             throw new Kraken("Unknown filter type in CountModsByFilter");
         }
 
-        public static IEnumerable<DataGridViewRow> ConstructModList(IEnumerable<GUIMod> modules)
+        public IEnumerable<DataGridViewRow> ConstructModList(IEnumerable<GUIMod> modules)
         {
-            var output = new List<DataGridViewRow>();
+            FullListOfModRows = new List<DataGridViewRow>();
             foreach (var mod in modules)
             {
                 var item = new DataGridViewRow {Tag = mod};
@@ -302,9 +304,9 @@ namespace CKAN
                 installedCell.ReadOnly = !mod.IsInstallable();
                 updateCell.ReadOnly = !mod.IsInstallable() || !mod.HasUpdate;
 
-                output.Add(item);
+                FullListOfModRows.Add(item);
             }
-            return output;
+            return FullListOfModRows;
         }
 
         private bool IsNameInNameFilter(GUIMod mod)
