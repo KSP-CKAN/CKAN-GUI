@@ -205,7 +205,9 @@ namespace CKAN
             RelationshipResolver resolver;
             try
             {
-                resolver = new RelationshipResolver(modulesToInstall.ToList(), options, registry, current_instance.Version());
+                // set the KSP version here to NULL, because we allow incompatible mod installation.  We will ask
+                // the user if he is sure during installation process.
+                resolver = new RelationshipResolver(modulesToInstall.ToList(), options, registry, null);
             }
             catch (Exception)
             {
@@ -276,9 +278,7 @@ namespace CKAN
                 var installedCell = mod.IsInstallable()
                     ? (DataGridViewCell) new DataGridViewCheckBoxCell()
                     : new DataGridViewTextBoxCell();
-                installedCell.Value = mod.IsIncompatible
-                    ? "-"
-                    : (!mod.IsAutodetected ? (object) mod.IsInstalled : "AD");
+                installedCell.Value = (!mod.IsAutodetected ? (object) mod.IsInstalled : "AD");
 
                 var updateCell = !mod.IsInstallable() || !mod.HasUpdate
                     ? (DataGridViewCell) new DataGridViewTextBoxCell()

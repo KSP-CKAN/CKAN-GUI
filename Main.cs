@@ -433,10 +433,6 @@ namespace CKAN
 
         private void ModList_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            if (mainModList.ModFilter == GUIModFilter.Incompatible)
-            {
-                return;
-            }
             var grid = sender as DataGridView;
             var row = grid.Rows[e.RowIndex];
             var columnIndex = e.ColumnIndex;
