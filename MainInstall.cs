@@ -61,6 +61,8 @@ namespace CKAN
             {
                 if (change.Value == GUIModChangeType.Install)
                 {
+                    var registry = RegistryManager.Instance(manager.CurrentInstance).registry;
+                    var ksp_version = manager.CurrentInstance.Version();
                     if (change.Key.recommends != null)
                     {
                         foreach (RelationshipDescriptor mod in change.Key.recommends)
@@ -70,23 +72,12 @@ namespace CKAN
                                 // if the mod is available for the current KSP version _and_
                                 // the mod is not installed _and_
                                 // the mod is not already in the install list
-                                if (
-                                    RegistryManager.Instance(manager.CurrentInstance)
-                                        .registry.LatestAvailable(mod.name, manager.CurrentInstance.Version()) !=
-                                    null &&
-                                    !RegistryManager.Instance(manager.CurrentInstance)
-                                        .registry.IsInstalled(mod.name) &&
+                                if (registry.LatestAvailable(mod.name, ksp_version) != null &&
+                                    !registry.IsInstalled(mod.name) &&
                                     !toInstall.Contains(mod.name))
                                 {
-                                    // add it to the list of recommended mods we display to the user
-                                    if (recommended.ContainsKey(mod.name))
-                                    {
-                                        recommended[mod.name].Add(change.Key.identifier);
-                                    }
-                                    else
-                                    {
-                                        recommended.Add(mod.name, new List<string> {change.Key.identifier});
-                                    }
+                                    // add it to the list of recommended mods we display to the user                                    
+                                    recommended.AppendItemOrAddNewList(mod.name, change.Key.identifier);                                    
                                 }
                             }
                                 // XXX - Don't ignore all krakens! Those things are important!
@@ -102,19 +93,11 @@ namespace CKAN
                         {
                             try
                             {
-                                if (
-                                    RegistryManager.Instance(manager.CurrentInstance).registry.LatestAvailable(mod.name, manager.CurrentInstance.Version()) != null &&
-                                    !RegistryManager.Instance(manager.CurrentInstance).registry.IsInstalled(mod.name) &&
+                                if (registry.LatestAvailable(mod.name, ksp_version) != null &&
+                                    !registry.IsInstalled(mod.name) &&
                                     !toInstall.Contains(mod.name))
                                 {
-                                    if (suggested.ContainsKey(mod.name))
-                                    {
-                                        suggested[mod.name].Add(change.Key.identifier);
-                                    }
-                                    else
-                                    {
-                                        suggested.Add(mod.name, new List<string> {change.Key.identifier});
-                                    }
+                                    suggested.AppendItemOrAddNewList(mod.name,change.Key.identifier);                                    
                                 }
                             }
                                 // XXX - Don't ignore all krakens! Those things are important!
