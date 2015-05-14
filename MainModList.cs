@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace CKAN
@@ -44,12 +43,22 @@ namespace CKAN
         private void _UpdateModsList(bool repo_updated)
         {
             log.Debug("Updating the mod list");
-            Registry registry = RegistryManager.Instance(CurrentInstance).registry;
+            Registry registry = RegistryManager.Instance(CurrentInstance).registry;            
+            var gui_mods = new HashSet<GUIMod>(registry.Available(CurrentInstance.Version())
+                .Select(m => new GUIMod(m, registry, CurrentInstance.Version())));
+            gui_mods.UnionWith(registry.Incompatible(CurrentInstance.Version())
+                .Select(m => new GUIMod(m, registry, CurrentInstance.Version())));
+            var installed = registry.InstalledModules.Select(module => module.Module)
+                .Select(m => new GUIMod(m, registry, CurrentInstance.Version()));
 
-            var ckanModules = registry.Available(CurrentInstance.Version()).Concat(
-                registry.Incompatible(CurrentInstance.Version())).ToList();
-            var gui_mods =
-                new HashSet<GUIMod>(ckanModules.Select(m => new GUIMod(m, registry, CurrentInstance.Version())));
+            //Hashset does not define it add/unionwith replaces existing elements. 
+            //In this case that could cause a CkanModule to be replaced by a Module.
+            //Hence the explicit checking
+            foreach (var mod in installed.Where(mod=>!gui_mods.Contains(mod)))
+            {
+                gui_mods.Add(mod); 
+            }
+            
             var old_modules = new HashSet<GUIMod>(mainModList.Modules);
             if (repo_updated)
             {
@@ -232,7 +241,8 @@ namespace CKAN
             {
                 //TODO This would be a good place to have a event that alters the row's graphics to show it will be removed
                 //TODO This currently gets the latest version. This may cause the displayed version to wrong in the changset. 
-                var modules = reverse_dependencies.Select(rDep => registry.LatestAvailable(rDep, null))
+                var modules = reverse_dependencies.Where(r_dep=>!modules_to_remove.Contains(r_dep))
+                                                  .Select(r_dep => registry.LatestAvailable(r_dep, null))
                                                   .Select(mod => new GUIMod(mod, registry, version));                
                 changeSet.UnionWith(modules.Select(mod => new KeyValuePair<GUIMod, GUIModChangeType>(mod, GUIModChangeType.Remove)));
             }

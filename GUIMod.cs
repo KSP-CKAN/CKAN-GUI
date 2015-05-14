@@ -48,11 +48,22 @@ namespace CKAN
             Authors = mod.author == null ? "N/A" : String.Join(",", mod.author);
 
             var installed_version = registry.InstalledVersion(mod.identifier);
-            var latest_version = registry.LatestAvailable(mod.identifier, current_ksp_version);
+            Version latest_version = null;
+            try
+            {
+                var latest_available = registry.LatestAvailable(mod.identifier, current_ksp_version);
+                if(latest_available!=null)
+                latest_version = latest_available.version;
+            }
+            catch (ModuleNotFoundKraken)
+            {
+                latest_version = installed_version;
+            }
+            
             var ksp_version = mod.ksp_version;
 
             InstalledVersion = installed_version != null ? installed_version.ToString() : "-";
-            LatestVersion = latest_version != null ? latest_version.version.ToString() : "-";
+            LatestVersion = latest_version != null ? latest_version.ToString() : "-";
             KSPversion = ksp_version != null ? ksp_version.ToString() : "-";
 
             Abstract = mod.@abstract;
