@@ -29,6 +29,11 @@ namespace CKAN
         public bool IsNew { get; set; }
         public bool IsCKAN { get; private set; }
 
+        public string Version
+        {
+            get { return InstalledVersion != null ? InstalledVersion : LatestVersion; }
+        }
+
         public GUIMod(Module mod, Registry registry, KSPVersion current_ksp_version, bool is_ckan = false)
         {
             IsCKAN = is_ckan;
@@ -42,13 +47,13 @@ namespace CKAN
             IsAutodetected = registry.IsAutodetected(mod.identifier);
             Authors = mod.author == null ? "N/A" : String.Join(",", mod.author);
 
-            var installedVersion = registry.InstalledVersion(mod.identifier);
-            var latestVersion = registry.LatestAvailable(mod.identifier, current_ksp_version);
-            var kspVersion = mod.ksp_version;
+            var installed_version = registry.InstalledVersion(mod.identifier);
+            var latest_version = registry.LatestAvailable(mod.identifier, current_ksp_version);
+            var ksp_version = mod.ksp_version;
 
-            InstalledVersion = installedVersion != null ? installedVersion.ToString() : "-";
-            LatestVersion = latestVersion != null ? latestVersion.version.ToString() : "-";
-            KSPversion = kspVersion != null ? kspVersion.ToString() : "-";
+            InstalledVersion = installed_version != null ? installed_version.ToString() : "-";
+            LatestVersion = latest_version != null ? latest_version.version.ToString() : "-";
+            KSPversion = ksp_version != null ? ksp_version.ToString() : "-";
 
             Abstract = mod.@abstract;
             Homepage = mod.resources != null && mod.resources.homepage != null
@@ -75,17 +80,16 @@ namespace CKAN
             return Mod;
         }
 
-        public KeyValuePair<CkanModule, GUIModChangeType>? GetRequestedChange()
-        {
-            if (!IsCKAN) throw new InvalidCastException("Method can not be called unless IsCKAN");
+        public KeyValuePair<GUIMod, GUIModChangeType>? GetRequestedChange()
+        {            
             if (IsInstalled ^ IsInstallChecked)
             {
                 var change_type = IsInstalled ? GUIModChangeType.Remove : GUIModChangeType.Install;
-                return new KeyValuePair<CkanModule, GUIModChangeType>((CkanModule) Mod, change_type);
+                return new KeyValuePair<GUIMod, GUIModChangeType>(this, change_type);
             }
             if (IsInstalled && (IsInstallChecked && HasUpdate && IsUpgradeChecked))
             {
-                return new KeyValuePair<CkanModule, GUIModChangeType>((CkanModule) Mod, GUIModChangeType.Update);
+                return new KeyValuePair<GUIMod, GUIModChangeType>(this, GUIModChangeType.Update);
             }
             return null;
         }

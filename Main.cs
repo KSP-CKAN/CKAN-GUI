@@ -34,7 +34,7 @@ namespace CKAN
 
     public partial class Main
     {
-        public delegate void ModChangedCallback(CkanModule module, GUIModChangeType change);
+        public delegate void ModChangedCallback(Module module, GUIModChangeType change);
 
         public static event ModChangedCallback modChangedCallback;
 
@@ -65,12 +65,12 @@ namespace CKAN
 
         public GUIUser m_User;
 
-        private Timer filterTimer;
+        private Timer filter_timer;
 
-        private IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>> change_set;
-        private Dictionary<Module, string> conflicts;
+        private IEnumerable<KeyValuePair<GUIMod, GUIModChangeType>> change_set;
+        private Dictionary<GUIMod, string> conflicts;
 
-        private IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>> ChangeSet
+        private IEnumerable<KeyValuePair<GUIMod, GUIModChangeType>> ChangeSet
         {
             get { return change_set; }
             set
@@ -80,7 +80,7 @@ namespace CKAN
             }
         }
 
-        private Dictionary<Module, string> Conflicts
+        private Dictionary<GUIMod, string> Conflicts
         {
             get { return conflicts; }
             set
@@ -94,7 +94,7 @@ namespace CKAN
         {
             foreach (DataGridViewRow row in ModList.Rows)
             {
-                var module = ((GUIMod) row.Tag).ToModule();
+                var module = ((GUIMod) row.Tag);
                 string value;
 
                 if (Conflicts != null && Conflicts.TryGetValue(module, out value))
@@ -469,17 +469,17 @@ namespace CKAN
         /// http://mono.1490590.n4.nabble.com/Incorrect-missing-and-duplicate-keypress-events-td4658863.html
         /// </summary>
         private void RunFilterUpdateTimer() {
-            if (filterTimer == null)
+            if (filter_timer == null)
             {
-                filterTimer = new Timer();
-                filterTimer.Tick += OnFilterUpdateTimer;
-                filterTimer.Interval = 700;
-                filterTimer.Start();
+                filter_timer = new Timer();
+                filter_timer.Tick += OnFilterUpdateTimer;
+                filter_timer.Interval = 700;
+                filter_timer.Start();
             }
             else
             {
-                filterTimer.Stop();
-                filterTimer.Start();
+                filter_timer.Stop();
+                filter_timer.Start();
             }
         }
 
@@ -493,7 +493,7 @@ namespace CKAN
         {
             mainModList.ModNameFilter = FilterByNameTextBox.Text;
             mainModList.ModAuthorFilter = FilterByAuthorTextBox.Text;
-            filterTimer.Stop();
+            filter_timer.Stop();
         }
 
         /// <summary>
@@ -594,13 +594,13 @@ namespace CKAN
 
         private void UpdateChangeSetAndConflicts(Registry registry)
         {
-            IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>> full_change_set;
-            Dictionary<Module, string> conflicts;
+            IEnumerable<KeyValuePair<GUIMod, GUIModChangeType>> full_change_set;
+            Dictionary<GUIMod, string> conflicts;
 
             var user_change_set = mainModList.ComputeUserChangeSet();
             try
             {
-                var module_installer = ModuleInstaller.GetInstance(CurrentInstance, GUI.user);
+                var module_installer = ModuleInstaller.GetInstance(CurrentInstance, m_User);
                 full_change_set = MainModList.ComputeChangeSetFromModList(registry, user_change_set, module_installer,
                     CurrentInstance.Version());
                 conflicts = null;
@@ -664,7 +664,7 @@ namespace CKAN
 
             ResetProgress();
             ShowWaitDialog(false);
-            ModuleInstaller.GetInstance(CurrentInstance, GUI.user).CachedOrDownload(module.ToCkanModule());
+            ModuleInstaller.GetInstance(CurrentInstance, m_User).CachedOrDownload(module.ToCkanModule());
             HideWaitDialog(true);
 
             UpdateModContentsTree(module);
@@ -790,8 +790,9 @@ namespace CKAN
                 // Sneakily add our version in...
                 registry_manager.registry.AddAvailable(module);
 
-                var changeset = new List<KeyValuePair<CkanModule, GUIModChangeType>>();
-                changeset.Add(new KeyValuePair<CkanModule, GUIModChangeType>(module, GUIModChangeType.Install));
+                var changeset = new List<KeyValuePair<GUIMod, GUIModChangeType>>();
+                changeset.Add(new KeyValuePair<GUIMod, GUIModChangeType>(
+                    new GUIMod(module,registry_manager.registry,CurrentInstance.Version()), GUIModChangeType.Install));
 
                 menuStrip1.Enabled = false;
 
@@ -799,7 +800,7 @@ namespace CKAN
                 install_ops.with_recommends = false;
 
                 m_InstallWorker.RunWorkerAsync(
-                    new KeyValuePair<List<KeyValuePair<CkanModule, GUIModChangeType>>, RelationshipResolverOptions>(
+                    new KeyValuePair<List<KeyValuePair<GUIMod, GUIModChangeType>>, RelationshipResolverOptions>(
                         changeset, install_ops));
                 m_Changeset = null;
 
