@@ -94,7 +94,7 @@ namespace CKAN
         {
             foreach (DataGridViewRow row in ModList.Rows)
             {
-                var module = ((GUIMod) row.Tag).ToCkanModule();
+                var module = ((GUIMod) row.Tag).ToModule();
                 string value;
 
                 if (Conflicts != null && Conflicts.TryGetValue(module, out value))
@@ -304,7 +304,11 @@ namespace CKAN
 
             CurrentInstanceUpdated();
 
+
             ModList.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
+            Text = String.Format("CKAN {0} - KSP {1}  --  {2}  -- {3}", Meta.Version(), CurrentInstance.Version(),
+                CurrentInstance.GameDir());
+            KSPVersionLabel.Text = String.Format("Kerbal Space Program {0}", CurrentInstance.Version());
 
             if (m_CommandLineArgs.Length >= 2)
             {
@@ -327,8 +331,8 @@ namespace CKAN
                 log.Debug("Attempting to select mod from startup parameters");
                 foreach (DataGridViewRow row in ModList.Rows)
                 {
-                    var module = ((GUIMod)row.Tag).ToCkanModule();
-                    if (identifier == module.identifier)
+                    var module = ((GUIMod) row.Tag);
+                    if (identifier == module.Identifier)
                     {
                         ModList.FirstDisplayedScrollingRowIndex = i;
                         row.Selected = true;
@@ -415,8 +419,6 @@ namespace CKAN
             
             ModInfoTabControl.Enabled = module!=null;
             if (module == null) return;
-
-            ModInfoTabControl.Enabled = true;
 
             UpdateModInfo(module);
             UpdateModDependencyGraph(module);
@@ -525,7 +527,7 @@ namespace CKAN
             var rows = ModList.Rows.Cast<DataGridViewRow>().Where(row => row.Visible);
             var does_name_begin_with_char = new Func<DataGridViewRow, bool>(row =>
             {
-                var modname = ((GUIMod) row.Tag).ToCkanModule().name;
+                var modname = ((GUIMod) row.Tag).Name;
                 var key = e.KeyChar.ToString();
                 return modname.StartsWith(key, StringComparison.OrdinalIgnoreCase);
             });
@@ -659,9 +661,10 @@ namespace CKAN
         {
             var module = GetSelectedModule();
             if (module == null) return;
+
             ResetProgress();
             ShowWaitDialog(false);
-            ModuleInstaller.GetInstance(CurrentInstance, GUI.user).CachedOrDownload(module);
+            ModuleInstaller.GetInstance(CurrentInstance, GUI.user).CachedOrDownload(module.ToCkanModule());
             HideWaitDialog(true);
 
             UpdateModContentsTree(module);
@@ -675,12 +678,12 @@ namespace CKAN
 
         private void ModuleRelationshipType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            CkanModule module = GetSelectedModule();
+            GUIMod module = GetSelectedModule();
             if (module == null) return;
             UpdateModDependencyGraph(module);
         }
 
-        private CkanModule GetSelectedModule()
+        private GUIMod GetSelectedModule()
         {
             if (ModList.SelectedRows.Count == 0)
             {
@@ -693,7 +696,8 @@ namespace CKAN
                 return null;
             }
 
-            var module = ((GUIMod) selected_item.Tag).ToCkanModule();            
+
+            var module = ((GUIMod) selected_item.Tag);            
             return module;
         }
 
