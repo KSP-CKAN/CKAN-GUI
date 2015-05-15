@@ -206,9 +206,12 @@ namespace CKAN
     }
 
 
-    public partial class Main
+    public class MainInstallGUI
     {
-        private BackgroundWorker m_InstallWorker;
+
+        public Main main;
+        public KSP ksp_instance;
+        internal BackgroundWorker m_InstallWorker;
 
 
         // used to signal the install worker that the user canceled the install process
@@ -218,14 +221,21 @@ namespace CKAN
         // this will be the final list of mods we want to install 
         private MainInstall main_install;
 
-        private void InstallMods(object sender, DoWorkEventArgs e) // this probably needs to be refactored
+        public MainInstallGUI(KSP ksp_instance,Main main)
+        {
+            this.main = main;
+            this.ksp_instance = ksp_instance;
+        }
+
+
+        internal void InstallMods(object sender, DoWorkEventArgs e) // this probably needs to be refactored
         {
             var opts =
                 (KeyValuePair<List<KeyValuePair<CkanModule, GUIModChangeType>>, RelationshipResolverOptions>) e.Argument;
 
-            ClearLog();
-            main_install = new MainInstall(opts, ModuleInstaller.GetInstance(CurrentInstance, GUI.user),
-                RegistryManager.Instance(manager.CurrentInstance).registry, manager.CurrentInstance.Version());
+            main.ClearLog();            
+            main_install = new MainInstall(opts, ModuleInstaller.GetInstance(ksp_instance, GUI.user),
+                RegistryManager.Instance(ksp_instance).registry, ksp_instance.Version());
             main_install.Start();
 
             DisplayModSelectionTab(main_install.recommended, "Choose recommended mods");
@@ -233,32 +243,32 @@ namespace CKAN
 
             if (install_canceled)
             {
-                m_TabController.HideTab("WaitTabPage");
-                m_TabController.ShowTab("ManageModsTabPage");
+                main.m_TabController.HideTab("WaitTabPage");
+                main.m_TabController.ShowTab("ManageModsTabPage");
                 e.Result = new KeyValuePair<bool, List<KeyValuePair<CkanModule, GUIModChangeType>>>(false, opts.Key);
                 return;
             }
 
             // Now let's make all our changes.
 
-            m_TabController.RenameTab("WaitTabPage", "Installing mods");
-            m_TabController.ShowTab("WaitTabPage");
-            m_TabController.SetTabLock(true);
+            main.m_TabController.RenameTab("WaitTabPage", "Installing mods");
+            main.m_TabController.ShowTab("WaitTabPage");
+            main.m_TabController.SetTabLock(true);
 
 
             var downloader = new NetAsyncDownloader(GUI.user);
-            cancelCallback = () =>
+            main.cancelCallback = () =>
             {
                 downloader.CancelDownload();
                 install_canceled = true;
             };
 
 
-            SetDescription("Uninstalling selected mods");
+            main.SetDescription("Uninstalling selected mods");
             main_install.UninstallList();
             if (install_canceled) return;
 
-            SetDescription("Updating selected mods");
+            main.SetDescription("Updating selected mods");
             main_install.Upgrade(downloader);
 
 
@@ -278,10 +288,10 @@ namespace CKAN
                 }
                 try
                 {
-                    var module_installer = ModuleInstaller.GetInstance(manager.CurrentInstance, GUI.user);
+                    var module_installer = ModuleInstaller.GetInstance(ksp_instance, GUI.user);
                     module_installer.onReportModInstalled =
-                        (mod) => { AddStatusMessage("Module \"{0}\" successfully installed", mod.name); };
-                    cancelCallback = downloader.CancelDownload;
+                        (mod) => { main.AddStatusMessage("Module \"{0}\" successfully installed", mod.name); };
+                    main.cancelCallback = downloader.CancelDownload;
                     var ret = main_install.InstallList(opts.Value, downloader, GUI.user, module_installer);
                     if (!ret)
                     {
@@ -294,30 +304,30 @@ namespace CKAN
                 }
                 catch (TooManyModsProvideKraken too_many_provides)
                 {
-                    Util.Invoke(this, () => UpdateProvidedModsDialog(too_many_provides));
+                    Util.Invoke(main, () => UpdateProvidedModsDialog(too_many_provides));
 
-                    m_TabController.ShowTab("ChooseProvidedModsTabPage", 3);
-                    m_TabController.SetTabLock(true);
+                    main.m_TabController.ShowTab("ChooseProvidedModsTabPage", 3);
+                    main.m_TabController.SetTabLock(true);
 
                     lock (this)
                     {
                         Monitor.Wait(this);
                     }
 
-                    m_TabController.SetTabLock(false);
+                    main.m_TabController.SetTabLock(false);
 
-                    m_TabController.HideTab("ChooseProvidedModsTabPage");
+                    main.m_TabController.HideTab("ChooseProvidedModsTabPage");
 
                     if (install_canceled)
                     {
-                        m_TabController.HideTab("WaitTabPage");
-                        m_TabController.ShowTab("ManageModsTabPage");
+                        main.m_TabController.HideTab("WaitTabPage");
+                        main.m_TabController.ShowTab("ManageModsTabPage");
                         e.Result = new KeyValuePair<bool, List<KeyValuePair<CkanModule, GUIModChangeType>>>(false,
                             opts.Key);
                         return;
                     }
 
-                    m_TabController.ShowTab("WaitTabPage");
+                    main.m_TabController.ShowTab("WaitTabPage");
                 }
             }
 
@@ -330,91 +340,36 @@ namespace CKAN
             // selections.
             if (modlist.Any())
             {
-                Util.Invoke(this, () => UpdateRecommendedDialog(modlist));
+                Util.Invoke(main, () => UpdateRecommendedDialog(modlist));
 
-                m_TabController.ShowTab("ChooseRecommendedModsTabPage", 3);
-                m_TabController.RenameTab("ChooseRecommendedModsTabPage", tab_name);
-                m_TabController.SetTabLock(true);
+                main.m_TabController.ShowTab("ChooseRecommendedModsTabPage", 3);
+                main.m_TabController.RenameTab("ChooseRecommendedModsTabPage", tab_name);
+                main.m_TabController.SetTabLock(true);
 
                 lock (this)
                 {
                     Monitor.Wait(this);
                 }
 
-                m_TabController.SetTabLock(false);
+                main.m_TabController.SetTabLock(false);
             }
 
-            m_TabController.HideTab("ChooseRecommendedModsTabPage");
+            main.m_TabController.HideTab("ChooseRecommendedModsTabPage");
         }
 
-        private void PostInstallMods(object sender, RunWorkerCompletedEventArgs e)
-        {
-            m_TabController.SetTabLock(false);
-
-            UpdateModsList();
-
-            var result = (KeyValuePair<bool, List<KeyValuePair<CkanModule, GUIModChangeType>>>) e.Result;
-
-            if (result.Key)
-            {
-                if (modChangedCallback != null)
-                {
-                    foreach (var mod in result.Value)
-                    {
-                        modChangedCallback(mod.Key, mod.Value);
-                    }
-                }
-
-                // install successful
-                AddStatusMessage("Success!");
-                HideWaitDialog(true);
-                m_TabController.HideTab("ChangesetTabPage");
-                ApplyToolButton.Enabled = false;
-            }
-            else
-            {
-                // there was an error
-                // rollback user's choices but stay on the log dialog
-                AddStatusMessage("Error!");
-                SetDescription("An error occurred, check the log for information");
-                Util.Invoke(DialogProgressBar, () => DialogProgressBar.Style = ProgressBarStyle.Continuous);
-                Util.Invoke(DialogProgressBar, () => DialogProgressBar.Value = 0);
-
-                var opts = result.Value;
-
-                foreach (KeyValuePair<CkanModule, GUIModChangeType> opt in opts)
-                {
-                    switch (opt.Value)
-                    {
-                        case GUIModChangeType.Install:
-                            MarkModForInstall(opt.Key.identifier);
-                            break;
-                        case GUIModChangeType.Update:
-                            MarkModForUpdate(opt.Key.identifier);
-                            break;
-                        case GUIModChangeType.Remove:
-                            MarkModForInstall(opt.Key.identifier, true);
-                            break;
-                    }
-                }
-            }
-
-            Util.Invoke(this, () => Enabled = true);
-            Util.Invoke(menuStrip1, () => menuStrip1.Enabled = true);
-        }
 
         private void UpdateProvidedModsDialog(TooManyModsProvideKraken too_many_provides)
         {
             var text = string.Format(
                 "Module {0} is provided by more than one available module, please choose one of the following mods:",
                 too_many_provides.requested);
-            Util.Invoke(ChooseProvidedModsLabel, () =>
+            Util.Invoke(main.ChooseProvidedModsLabel, () =>
             {
-                ChooseProvidedModsLabel.Text = text;
-                ChooseProvidedModsListView.Items.Clear();
+                main.ChooseProvidedModsLabel.Text = text;
+                main.ChooseProvidedModsListView.Items.Clear();
             });
 
-            ChooseProvidedModsListView.ItemChecked += ChooseProvidedModsListView_ItemChecked;
+            main.ChooseProvidedModsListView.ItemChecked += ChooseProvidedModsListView_ItemChecked;
 
             var items = new List<ListViewItem>(too_many_provides.modules.Count);
             foreach (var module in too_many_provides.modules)
@@ -426,8 +381,8 @@ namespace CKAN
                 items.Add(item);
             }
 
-            Util.Invoke(ChooseProvidedModsListView,
-                () => { ChooseProvidedModsListView.Items.AddRange(items.ToArray()); }
+            Util.Invoke(main.ChooseProvidedModsListView,
+                () => { main.ChooseProvidedModsListView.Items.AddRange(items.ToArray()); }
                 );
         }
 
@@ -438,7 +393,7 @@ namespace CKAN
                 return;
             }
 
-            foreach (ListViewItem item in ChooseProvidedModsListView.Items)
+            foreach (ListViewItem item in main.ChooseProvidedModsListView.Items)
             {
                 if (item != e.Item && item.Checked)
                 {
@@ -447,7 +402,7 @@ namespace CKAN
             }
         }
 
-        private void ChooseProvidedModsCancelButton_Click(object sender, EventArgs e)
+        internal void ChooseProvidedModsCancelButton_Click(object sender, EventArgs e)
         {
             install_canceled = true;
 
@@ -457,9 +412,9 @@ namespace CKAN
             }
         }
 
-        private void ChooseProvidedModsContinueButton_Click(object sender, EventArgs e)
+        internal void ChooseProvidedModsContinueButton_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem item in ChooseProvidedModsListView.Items)
+            foreach (ListViewItem item in main.ChooseProvidedModsListView.Items)
             {
                 if (item.Checked)
                 {
@@ -479,19 +434,19 @@ namespace CKAN
         {
             if (!suggested)
             {
-                RecommendedDialogLabel.Text =
+                main.RecommendedDialogLabel.Text =
                     "The following modules have been recommended by one or more of the chosen modules:";
-                RecommendedModsListView.Columns[1].Text = "Recommended by:";
+                main.RecommendedModsListView.Columns[1].Text = "Recommended by:";
             }
             else
             {
-                RecommendedDialogLabel.Text =
+                main.RecommendedDialogLabel.Text =
                     "The following modules have been suggested by one or more of the chosen modules:";
-                RecommendedModsListView.Columns[1].Text = "Suggested by:";
+                main.RecommendedModsListView.Columns[1].Text = "Suggested by:";
             }
 
 
-            RecommendedModsListView.Items.Clear();
+            main.RecommendedModsListView.Items.Clear();
 
             foreach (var pair in mods)
             {
@@ -508,14 +463,14 @@ namespace CKAN
                         without_toomanyprovides_kraken = true
                     };
 
-                    var registry = RegistryManager.Instance(manager.CurrentInstance).registry;
-                    var resolver = new RelationshipResolver(new[] {pair.Key}, opts, registry, CurrentInstance.Version());
+                    var registry = RegistryManager.Instance(ksp_instance).registry;
+                    var resolver = new RelationshipResolver(new[] {pair.Key}, opts, registry, ksp_instance.Version());
                     if (!resolver.ModList().Any())
                     {
                         continue;
                     }
 
-                    module = registry.LatestAvailable(pair.Key, CurrentInstance.Version());
+                    module = registry.LatestAvailable(pair.Key, ksp_instance.Version());
                 }
                 catch
                 {
@@ -541,13 +496,13 @@ namespace CKAN
                         new ListViewItem.ListViewSubItem {Text = module.@abstract}
                     }
                 };
-                RecommendedModsListView.Items.Add(item);
+                main.RecommendedModsListView.Items.Add(item);
             }
         }
 
-        private void RecommendedModsContinueButton_Click(object sender, EventArgs e)
+        internal void RecommendedModsContinueButton_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem item in RecommendedModsListView.Items)
+            foreach (ListViewItem item in main.RecommendedModsListView.Items)
             {
                 if (item.Checked)
                 {
@@ -562,7 +517,7 @@ namespace CKAN
             }
         }
 
-        private void RecommendedModsCancelButton_Click(object sender, EventArgs e)
+        internal void RecommendedModsCancelButton_Click(object sender, EventArgs e)
         {
             install_canceled = true;
 
