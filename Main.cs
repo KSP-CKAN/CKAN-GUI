@@ -8,6 +8,8 @@ using System.Windows.Forms;
 using log4net;
 using System.Collections.Generic;
 using System.Drawing;
+using Newtonsoft.Json;
+using CKAN.Properties;
 
 namespace CKAN
 {
@@ -63,6 +65,8 @@ namespace CKAN
 
         public GUIUser m_User = null;
 
+        private Timer filterTimer = null;
+
         private IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>> change_set;
         private Dictionary<Module, string> conflicts;
 
@@ -117,7 +121,7 @@ namespace CKAN
 
                         row.DefaultCellStyle.BackColor = Color.White;
                         ModList.InvalidateRow(row.Index);
-                    }                                           
+                    }
                 }
             }
         }
@@ -139,6 +143,7 @@ namespace CKAN
 
         public Main(string[] cmdlineArgs, GUIUser User, bool showConsole)
         {
+            log.Info("Starting the GUI");
             m_CommandLineArgs = cmdlineArgs;
             m_User = User;
 
@@ -245,6 +250,7 @@ namespace CKAN
         {
             if (!m_Configuration.CheckForUpdatesOnLaunchNoNag)
             {
+                log.Debug("Asking user if they wish for autoupdates");
                 if (new AskUserForAutoUpdatesDialog().ShowDialog() == DialogResult.OK)
                 {
                     m_Configuration.CheckForUpdatesOnLaunch = true;
@@ -258,15 +264,18 @@ namespace CKAN
             {
                 try
                 {
+                    log.Info("Making autoupdate call");
                     var latest_version = AutoUpdate.FetchLatestCkanVersion();
                     var current_version = new Version(Meta.Version());
 
                     if (latest_version.IsGreaterThan(current_version))
                     {
+                        log.Debug("Found higher ckan version");
                         var release_notes = AutoUpdate.FetchLatestCkanVersionReleaseNotes();
                         var dialog = new NewUpdateDialog(latest_version.ToString(), release_notes);
                         if (dialog.ShowDialog() == DialogResult.OK)
                         {
+                            log.Info("Start ckan update");
                             AutoUpdate.StartUpdateProcess(true);
                         }
                     }
@@ -274,6 +283,7 @@ namespace CKAN
                 catch (Exception exception)
                 {
                     m_User.RaiseError("Error in autoupdate: \n\t" + exception.Message + "");
+                    log.Error("Error in autoupdate", exception);
                 }
             }
 
@@ -299,7 +309,7 @@ namespace CKAN
 
             ModList.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.AllCells);
 
-            Text = String.Format("CKAN {0} - KSP {1}", Meta.Version(), CurrentInstance.Version());
+            Text = String.Format("CKAN {0} - KSP {1}    --    {2}", Meta.Version(), CurrentInstance.Version(), CurrentInstance.GameDir());
             KSPVersionLabel.Text = String.Format("Kerbal Space Program {0}", CurrentInstance.Version());
 
             if (m_CommandLineArgs.Length >= 2)
@@ -320,6 +330,7 @@ namespace CKAN
                 }
 
                 int i = 0;
+                log.Debug("Attempting to select mod from startup parameters");
                 foreach (DataGridViewRow row in ModList.Rows)
                 {
                     var module = ((GUIMod) row.Tag).ToCkanModule();
@@ -332,6 +343,7 @@ namespace CKAN
 
                     i++;
                 }
+                log.Debug("Failed to select mod from startup parameters");
             }
 
             var pluginsPath = Path.Combine(CurrentInstance.CkanDir(), "Plugins");
@@ -341,6 +353,8 @@ namespace CKAN
             }
 
             m_PluginController = new PluginController(pluginsPath, true);
+
+            log.Info("GUI started");
         }
 
         private void RefreshToolButton_Click(object sender, EventArgs e)
@@ -411,12 +425,63 @@ namespace CKAN
 
         private void FilterByNameTextBox_TextChanged(object sender, EventArgs e)
         {
-            mainModList.ModNameFilter = FilterByNameTextBox.Text;
+            if (Platform.IsMac)
+            {
+                // Delay updating to improve typing performance on OS X
+                RunFilterUpdateTimer();
+            }
+            else
+            {
+                mainModList.ModNameFilter = FilterByNameTextBox.Text;
+            }
         }
 
         private void FilterByAuthorTextBox_TextChanged(object sender, EventArgs e)
         {
+            if (Platform.IsMac)
+            {
+                // Delay updating to improve typing performance on OS X
+                RunFilterUpdateTimer();
+            }
+            else
+            {
+                mainModList.ModAuthorFilter = FilterByAuthorTextBox.Text;
+            }
+        }
+
+        /// <summary>
+        /// Start or restart a timer to update the filter after an interval 
+        /// since the last keypress. On Mac OS X, this prevents the search 
+        /// field from locking up due to DataGridViews being slow and
+        /// key strokes being interpreted incorrectly when slowed down:
+        /// http://mono.1490590.n4.nabble.com/Incorrect-missing-and-duplicate-keypress-events-td4658863.html
+        /// </summary>
+        private void RunFilterUpdateTimer() {
+            if (filterTimer == null)
+            {
+                filterTimer = new Timer();
+                filterTimer.Tick += OnFilterUpdateTimer;
+                filterTimer.Interval = 700;
+                filterTimer.Start();
+            }
+            else
+            {
+                filterTimer.Stop();
+                filterTimer.Start();
+            }
+        }
+
+        /// <summary>
+        /// Updates the filter after an interval of time has passed since the 
+        /// last keypress.
+        /// </summary>
+        /// <param name="source">Source</param>
+        /// <param name="e">EventArgs</param>
+        private void OnFilterUpdateTimer(Object source, EventArgs e)
+        {
+            mainModList.ModNameFilter = FilterByNameTextBox.Text;
             mainModList.ModAuthorFilter = FilterByAuthorTextBox.Text;
+            filterTimer.Stop();
         }
 
         /// <summary>
@@ -429,17 +494,21 @@ namespace CKAN
             // Check the key. If it is space, mark the current mod as selected.
             if (e.KeyChar.ToString() == " ")
             {
-                var selectedRow = ModList.CurrentRow;
+                var selected_row = ModList.CurrentRow;
 
-                if (selectedRow != null)
+                if (selected_row != null)
                 {
                     // Get the checkbox.
-                    var selectedRowCheckBox = (DataGridViewCheckBoxCell) selectedRow.Cells["Installed"];
+                    var selected_row_check_box = selected_row.Cells["Installed"] as DataGridViewCheckBoxCell;
 
                     // Invert the value.
-                    bool selectedValue = (bool) selectedRowCheckBox.Value;
-                    selectedRowCheckBox.Value = !selectedValue;
+                    if (selected_row_check_box != null)
+                    {
+                        bool selected_value = (bool)selected_row_check_box.Value;
+                        selected_row_check_box.Value = !selected_value;
+                    }                    
                 }
+                e.Handled = true;
                 return;
             }
 
@@ -475,9 +544,9 @@ namespace CKAN
                 return;
             }
             var row_index = e.RowIndex;
-            var columnIndex = e.ColumnIndex;
+            var column_index = e.ColumnIndex;
 
-            if (row_index < 0 || columnIndex < 0)
+            if (row_index < 0 || column_index < 0)
             {
                 return;
             }
@@ -486,17 +555,17 @@ namespace CKAN
             var grid = sender as DataGridView;
 
             var row = grid.Rows[row_index];
-            var grid_view_cell = row.Cells[columnIndex];
+            var grid_view_cell = row.Cells[column_index];
 
             if (grid_view_cell is DataGridViewLinkCell)
             {
                 var cell = grid_view_cell as DataGridViewLinkCell;
                 Process.Start(cell.Value.ToString());
             }
-            else if (columnIndex < 2)
+            else if (column_index < 2)
             {
                 var gui_mod = ((GUIMod) row.Tag);
-                switch (columnIndex)
+                switch (column_index)
                 {
                     case 0:
                         gui_mod.SetInstallChecked(row);
@@ -759,7 +828,7 @@ namespace CKAN
 
         private void installFromckanToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            m_OpenFileDialog.Filter = "CKAN metadata (*.ckan)|*.ckan";
+            m_OpenFileDialog.Filter = Resources.CKANFileFilter;
 
             if (m_OpenFileDialog.ShowDialog() == DialogResult.OK)
             {
@@ -805,6 +874,26 @@ namespace CKAN
 
                 UpdateChangesDialog(null, m_InstallWorker);
                 ShowWaitDialog();
+            }
+        }
+
+        /// <summary>
+        /// Exports installed mods to a .ckan file.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void exportModListToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var dlg = new SaveFileDialog();
+            dlg.Filter = Resources.CKANFileFilter;
+            dlg.Title = Resources.ExportInstalledModsDialogTitle;
+
+            if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
+                // Save, just to be certain that the installed-*.ckan metapackage is generated
+                RegistryManager.Instance(CurrentInstance).Save();
+
+                // TODO: The core might eventually save as something other than 'installed-default.ckan'
+                File.Copy(Path.Combine(CurrentInstance.CkanDir(), "installed-default.ckan"), dlg.FileName);
             }
         }
     }
