@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CKAN
@@ -136,14 +137,17 @@ namespace CKAN
     {
         internal List<DataGridViewRow> FullListOfModRows;
 
-        public MainModList(ModFiltersUpdatedEvent onModFiltersUpdated)
+        public MainModList(ModFiltersUpdatedEvent onModFiltersUpdated, HandleTooManyProvides too_many_provides)
         {
+            this.too_many_provides = too_many_provides;
             Modules = new ReadOnlyCollection<GUIMod>(new List<GUIMod>());
             ModFiltersUpdated += onModFiltersUpdated != null ? onModFiltersUpdated : (source) => { };
             ModFiltersUpdated(this);
         }
 
         public delegate void ModFiltersUpdatedEvent(MainModList source);
+        //TODO Move to relationship resolver and have it use this. 
+        public delegate Task<CkanModule> HandleTooManyProvides(TooManyModsProvideKraken kraken);
 
         public event ModFiltersUpdatedEvent ModFiltersUpdated;
         public ReadOnlyCollection<GUIMod> Modules { get; set; }
@@ -181,6 +185,7 @@ namespace CKAN
             }
         }
 
+        private HandleTooManyProvides too_many_provides;
         private GUIModFilter _modFilter = GUIModFilter.Compatible;
         private string _modNameFilter = String.Empty;
         private string _modAuthorFilter = String.Empty;
@@ -191,15 +196,15 @@ namespace CKAN
         /// </summary>
         /// <param name="registry"></param>
         /// <param name="current_instance"></param>
-        public static IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>> ComputeChangeSetFromModList(
+        public async Task<IEnumerable<KeyValuePair<CkanModule, GUIModChangeType>>> ComputeChangeSetFromModList(
             Registry registry, HashSet<KeyValuePair<CkanModule, GUIModChangeType>> changeSet, ModuleInstaller installer,
             KSPVersion version)
         {
             var modules_to_install = new HashSet<string>();
             var modules_to_remove = new HashSet<string>();
-            var options = new RelationshipResolverOptions()
+            var options = new RelationshipResolverOptions
             {
-                without_toomanyprovides_kraken = true,
+                without_toomanyprovides_kraken = false,
                 with_recommends = false
             };
 
@@ -223,7 +228,26 @@ namespace CKAN
             }
 
             //May throw InconsistentKraken
-            var resolver = new RelationshipResolver(modules_to_install.ToList(), options, registry, version);
+            RelationshipResolver resolver;
+            while (true)
+            {
+                try
+                {
+                    new RelationshipResolver(modules_to_install.ToList(), options, registry, version);
+                }
+                catch (TooManyModsProvideKraken kraken)
+                {
+                    var mod = await too_many_provides(kraken);
+                    if (mod != null)
+                    {
+                        modules_to_install.Add(mod.identifier);                        
+                    }
+                    continue;
+                }
+                break;
+            }
+
+            resolver = new RelationshipResolver(modules_to_install.ToList(), options, registry, version);
             changeSet.UnionWith(
                 resolver.ModList()
                     .Select(mod => new KeyValuePair<CkanModule, GUIModChangeType>(mod, GUIModChangeType.Install)));
