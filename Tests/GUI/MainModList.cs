@@ -129,7 +129,8 @@ namespace Tests.GUI
         }
 
         [Test]
-        public void TooManyProvidesCallsHandler()
+        [Category("Display")]
+        public async Task TooManyProvidesCallsHandler()
         {
             using (var tidy = new DisposableKSP())
             {                
@@ -153,11 +154,12 @@ namespace Tests.GUI
                     new KeyValuePair<CkanModule, GUIModChangeType>(mod,GUIModChangeType.Install)
                 };
                     
-                var mod_list = main_mod_list.ComputeChangeSetFromModList(registry, a, installer, null).Result;
+                var mod_list = await main_mod_list.ComputeChangeSetFromModList(registry, a, installer, null);
                 CollectionAssert.AreEquivalent(
                     new [] {
                         new KeyValuePair<CkanModule,GUIModChangeType>(mod,GUIModChangeType.Install),
                         new KeyValuePair<CkanModule,GUIModChangeType>(modb,GUIModChangeType.Install)},mod_list);                
+                        
             }
         }
         
