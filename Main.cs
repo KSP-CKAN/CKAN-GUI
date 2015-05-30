@@ -621,7 +621,7 @@ namespace CKAN
                 conflicts = Conflicts;
                 full_change_set = ChangeSet;
             }
-
+            last_mod_to_have_install_toggled.Clear();
             Conflicts = conflicts;
             ChangeSet = full_change_set;
         }
