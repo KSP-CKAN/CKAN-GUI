@@ -22,8 +22,8 @@ namespace CKAN
             // Each time a row in DataGridViewRow is changed, DataGridViewRow updates the view. Which is slow.
             // To make the filtering process faster, Copy the list of rows. Filter out the hidden and replace t
             // rows in DataGridView.
-            var rows = new DataGridViewRow[mainModList.FullListOfModRows.Count];
-            mainModList.FullListOfModRows.CopyTo(rows, 0);
+            var rows = new DataGridViewRow[mainModList.full_list_of_mod_rows.Count];
+            mainModList.full_list_of_mod_rows.CopyTo(rows, 0);
             ModList.Rows.Clear();
 
             foreach (var row in rows)
@@ -102,7 +102,7 @@ namespace CKAN
 
         private void _MarkModForInstall(string identifier, bool uninstall)
         {
-            foreach (DataGridViewRow row in ModList.Rows)
+            foreach (DataGridViewRow row in mainModList.full_list_of_mod_rows)
             {
                 var mod = (GUIMod) row.Tag;
                 if (mod.Identifier == identifier)
@@ -137,13 +137,14 @@ namespace CKAN
 
     public class MainModList
     {
-        internal List<DataGridViewRow> FullListOfModRows;
+        internal List<DataGridViewRow> full_list_of_mod_rows;
 
-        public MainModList(ModFiltersUpdatedEvent onModFiltersUpdated, HandleTooManyProvides too_many_provides)
+        public MainModList(ModFiltersUpdatedEvent onModFiltersUpdated, HandleTooManyProvides too_many_provides, IUser user = null)
         {
             this.too_many_provides = too_many_provides;
+            this.user = user ?? new NullUser();
             Modules = new ReadOnlyCollection<GUIMod>(new List<GUIMod>());
-            ModFiltersUpdated += onModFiltersUpdated != null ? onModFiltersUpdated : (source) => { };
+            ModFiltersUpdated += onModFiltersUpdated ?? (source => { });
             ModFiltersUpdated(this);
         }
 
@@ -191,6 +192,7 @@ namespace CKAN
         private GUIModFilter _modFilter = GUIModFilter.Compatible;
         private string _modNameFilter = String.Empty;
         private string _modAuthorFilter = String.Empty;
+        private IUser user; 
 
         /// <summary>
         /// This function returns a changeset based on the selections of the user. 
@@ -246,6 +248,13 @@ namespace CKAN
                     }
                     throw;
                 }
+                catch (ModuleNotFoundKraken kraken)
+                {
+                    //We shouldn't need this. However the relationship provider will throw TMPs with incompatible mods.
+                    user.RaiseError("Module {0} has not been found. This may be because it is not compatible " +
+                                    "with the currently installed version of KSP", kraken.module);
+                    return null;
+                }
                 break;
             }
 
@@ -300,7 +309,7 @@ namespace CKAN
 
         public IEnumerable<DataGridViewRow> ConstructModList(IEnumerable<GUIMod> modules)
         {
-            FullListOfModRows = new List<DataGridViewRow>();
+            full_list_of_mod_rows = new List<DataGridViewRow>();
             foreach (var mod in modules)
             {
                 var item = new DataGridViewRow {Tag = mod};
@@ -336,9 +345,9 @@ namespace CKAN
                 installed_cell.ReadOnly = !mod.IsInstallable(); 
                 update_cell.ReadOnly = !mod.IsInstallable() || !mod.HasUpdate;
 
-                FullListOfModRows.Add(item);
+                full_list_of_mod_rows.Add(item);
             }
-            return FullListOfModRows;
+            return full_list_of_mod_rows;
         }
 
         private bool IsNameInNameFilter(GUIMod mod)
