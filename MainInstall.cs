@@ -416,7 +416,7 @@ namespace CKAN
                 item.SubItems.Add(description);
                 ChooseProvidedModsListView.Items.Add(item);
             }
-            ChooseProvidedModsListView.Invalidate();
+            ChooseProvidedModsListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
             ChooseProvidedModsContinueButton.Enabled = false;
         }
 
