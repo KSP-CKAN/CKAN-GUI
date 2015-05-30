@@ -97,19 +97,20 @@ namespace CKAN
 
         public void MarkModForInstall(string identifier, bool uninstall = false)
         {
-            Util.Invoke(this, () => _MarkModForInstall(identifier));
+            Util.Invoke(this, () => _MarkModForInstall(identifier,uninstall));
         }
 
-        private void _MarkModForInstall(string identifier, bool uninstall = false)
+        private void _MarkModForInstall(string identifier, bool uninstall)
         {
             foreach (DataGridViewRow row in ModList.Rows)
             {
                 var mod = (GUIMod) row.Tag;
                 if (mod.Identifier == identifier)
                 {
-                    mod.IsInstallChecked = true;
+                    mod.IsInstallChecked = !uninstall;
                     //TODO Fix up MarkMod stuff when I commit the GUIConflict
                     (row.Cells[0] as DataGridViewCheckBoxCell).Value = !uninstall;
+                    if (!uninstall) last_mod_to_have_install_toggled = mod;
                     break;
                 }
             }
@@ -229,7 +230,6 @@ namespace CKAN
             }
 
             //May throw InconsistentKraken
-            RelationshipResolver resolver;
             while (true)
             {
                 try
@@ -241,14 +241,15 @@ namespace CKAN
                     var mod = await too_many_provides(kraken);
                     if (mod != null)
                     {
-                        modules_to_install.Add(mod.identifier);                        
+                        modules_to_install.Add(mod.identifier);
+                        continue;
                     }
-                    continue;
+                    throw;
                 }
                 break;
             }
 
-            resolver = new RelationshipResolver(modules_to_install.ToList(), options, registry, version);
+            var resolver = new RelationshipResolver(modules_to_install.ToList(), options, registry, version);
             changeSet.UnionWith(
                 resolver.ModList()
                     .Select(mod => new KeyValuePair<CkanModule, GUIModChangeType>(mod, GUIModChangeType.Install)));

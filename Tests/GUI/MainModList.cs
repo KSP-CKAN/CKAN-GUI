@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CKAN;
 using NUnit.Framework;
 
@@ -76,7 +77,8 @@ namespace Tests.GUI
                     mod,
                     mod2
                 });
-                Assert.Throws<InconsistentKraken>(()=>main_mod_list.ComputeChangeSetFromModList(registry,main_mod_list.ComputeUserChangeSet(),null, tidy.KSP.Version()));
+                var compute_change_set_from_mod_list = main_mod_list.ComputeChangeSetFromModList(registry, main_mod_list.ComputeUserChangeSet(), null, tidy.KSP.Version());
+                Assert.Throws<InconsistentKraken>(async ()=> await compute_change_set_from_mod_list);
             }
         }
 
@@ -124,6 +126,41 @@ namespace Tests.GUI
                 });
                 Assert.That(mod_list, Has.Count.EqualTo(2));
             }
-        }        
+        }
+
+        [Test]
+        public void TooManyProvidesCallsHandler()
+        {
+            using (var tidy = new DisposableKSP())
+            {                
+                var registry = Registry.Empty();
+                var generator = new RandomModuleGenerator(new Random(0451));
+                var provide_ident = "provide";
+                var mod = generator.GeneratorRandomModule(depends: new List<RelationshipDescriptor>()
+                {
+                    new RelationshipDescriptor() {name = provide_ident}
+                });
+                var moda = generator.GeneratorRandomModule(provides: new List<string> { provide_ident });
+                var modb = generator.GeneratorRandomModule(provides: new List<string> { provide_ident });
+                var choice_of_provide = modb;
+                registry.AddAvailable(mod);
+                registry.AddAvailable(moda);
+                registry.AddAvailable(modb);
+                var installer = ModuleInstaller.GetInstance(tidy.KSP, null);
+                var main_mod_list = new MainModList(null,async kraken => choice_of_provide);
+                var a = new HashSet<KeyValuePair<CkanModule, GUIModChangeType>>()
+                {
+                    new KeyValuePair<CkanModule, GUIModChangeType>(mod,GUIModChangeType.Install)
+                };
+                    
+                var mod_list = main_mod_list.ComputeChangeSetFromModList(registry, a, installer, null).Result;
+                CollectionAssert.AreEquivalent(
+                    new [] {
+                        new KeyValuePair<CkanModule,GUIModChangeType>(mod,GUIModChangeType.Install),
+                        new KeyValuePair<CkanModule,GUIModChangeType>(modb,GUIModChangeType.Install)},mod_list);                
+            }
+        }
+        
+        
     }
 }
