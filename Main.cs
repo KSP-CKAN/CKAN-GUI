@@ -542,7 +542,7 @@ namespace CKAN
 
             if (key.Distinct().Count() == 1)
             {
-                // It's the same key being pressed repeatedly, so use only that
+                // Treat repeating and single keypresses the same
                 key = key.Substring(0, 1);
             }
 
@@ -558,10 +558,8 @@ namespace CKAN
                     // Remember the first match to allow cycling back to it if necessary
                     first_match = row;
                 }
-                if (row == current_row || (current_match && row.Index < current_row.Index))
-                {
-                    // This row is already selected or a matching row is selected further down the list,
-                    // so the search should continue from there
+                if (key.Length == 1 && row_match && row.Index <= current_row.Index) {
+                    // Keep going forward if it's a single key match and not ahead of the current row
                     return false;
                 }
                 return row_match;
@@ -576,8 +574,13 @@ namespace CKAN
             }
             if (match != null)
             {
+                this.AddStatusMessage("");
                 match.Selected = true;
                 ModList.CurrentCell = match.Cells[0];
+            }
+            else
+            {
+                this.AddStatusMessage("Not found");
             }
         }
 
