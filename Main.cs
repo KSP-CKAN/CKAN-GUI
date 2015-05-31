@@ -530,15 +530,21 @@ namespace CKAN
 
             var rows = ModList.Rows.Cast<DataGridViewRow>().Where(row => row.Visible);
 
-            // Determine the number of seconds passed since last key press
+            // Determine time passed since last key press
             TimeSpan interval = DateTime.Now - this.lastSearchTime;
-            if (interval.TotalSeconds < 1 && key != this.lastSearchKey) {
-                // Last keypress was < 1 sec ago and it was a different key, so combine the last and current keys
+            if (interval.TotalSeconds < 1) {
+                // Last keypress was < 1 sec ago, so combine the last and current keys
                 key = this.lastSearchKey + key;
             }
             // Remember the current time and key
             this.lastSearchTime = DateTime.Now;
             this.lastSearchKey = key;
+
+            if (key.Distinct().Count() == 1)
+            {
+                // It's the same key being pressed repeatedly, so use only that
+                key = key.Substring(0, 1);
+            }
 
             var selected_name = ((GUIMod) selected_row.Tag).ToCkanModule().name;
             var selected_match = selected_name.StartsWith(key, StringComparison.OrdinalIgnoreCase);
@@ -549,7 +555,7 @@ namespace CKAN
                 var modname = ((GUIMod) row.Tag).ToCkanModule().name;
                 var row_match = modname.StartsWith(key, StringComparison.OrdinalIgnoreCase);
                 if (row_match && first_match == null) {
-                 // Remember the first match to allow cycling back to it if necessary
+                    // Remember the first match to allow cycling back to it if necessary
                     first_match = row;
                 }
                 if (row.Index == selected_row.Index || (selected_match && row.Index < selected_row.Index))
@@ -564,7 +570,7 @@ namespace CKAN
             DataGridViewRow match = rows.FirstOrDefault(does_name_begin_with_key);
             if (match == null && first_match != null)
             {
-             // If there were no matches after the first match, cycle over to the beginning
+                // If there were no matches after the first match, cycle over to the beginning
                 match = first_match;
             }
             if (match != null)
